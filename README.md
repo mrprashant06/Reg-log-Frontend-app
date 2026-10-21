@@ -1,4 +1,4 @@
-# 💎 AURA LUXE — Glassmorphic E-Commerce Frontend
+# 💎 AURA LUXE —  E-Commerce Frontend
 
 A demo Glassmorphic User Authentication & Account Access web application built with **React (Vite)**, **HTML5**, **CSS3 Glassmorphism**, **React Router DOM**, and **Lucide React**.
 
