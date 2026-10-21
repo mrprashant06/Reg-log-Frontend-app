@@ -16,13 +16,14 @@ import {
   Sparkles,
   ShieldCheck,
   Database,
-  Calendar,
+  Key,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import BackgroundOrbs from '../components/BackgroundOrbs';
 import BrandHeader from '../components/BrandHeader';
 import OtpInput from '../components/OtpInput';
-import { sendOtp, loginUser, logoutUser } from '../services/api';
+import PasswordRequirements from '../components/PasswordRequirements';
+import { sendOtp, loginUser, logoutUser, changePassword } from '../services/api';
 
 export default function LoginPage() {
   const location = useLocation();
@@ -44,17 +45,31 @@ export default function LoginPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
 
+  // Change Password state (within Dashboard)
+  const [showChangePasswordSection, setShowChangePasswordSection] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordMsg, setChangePasswordMsg] = useState('');
+  const [changePasswordError, setChangePasswordError] = useState('');
+
   // Feedback & Loading state
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Check for pre-filled identifier from successful Sign Up navigation
+  // Check for pre-filled identifier from successful Sign Up or Password Reset
   useEffect(() => {
     if (location.state?.prefillIdentifier) {
       setIdentifier(location.state.prefillIdentifier);
       if (location.state.justRegistered) {
         setSuccessMsg(`Welcome to AURA! Account ready for ${location.state.prefillIdentifier}. Please sign in.`);
+      } else if (location.state.justReset) {
+        setSuccessMsg(`Password successfully updated for ${location.state.prefillIdentifier}. Please log in.`);
       }
     }
   }, [location.state]);
@@ -170,16 +185,73 @@ export default function LoginPage() {
     }
   };
 
+  // Handle Change Password (for Authenticated Users)
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangePasswordMsg('');
+
+    if (!currentPassword) {
+      setChangePasswordError('Please enter your current password.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setChangePasswordError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setChangePasswordError('New password must include at least one uppercase letter (A-Z).');
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setChangePasswordError('New password must include at least one lowercase letter (a-z).');
+      return;
+    }
+    if (!/\d/.test(newPassword)) {
+      setChangePasswordError('New password must include at least one numeric digit (0-9).');
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      setChangePasswordError('New password must include at least one special character (!@#$%^&* etc.).');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setChangePasswordError('New password and confirmation password do not match.');
+      return;
+    }
+
+    try {
+      setChangePasswordLoading(true);
+      const res = await changePassword(
+        {
+          currentPassword,
+          newPassword,
+          confirmPassword: confirmNewPassword,
+        },
+        authToken
+      );
+      setChangePasswordMsg(res.message || 'Password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err) {
+      setChangePasswordError(err.message || 'Failed to change password. Please check your current password.');
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
+
   // Handle Sign Out
   const handleSignOut = async () => {
-    await logoutUser();
+    await logoutUser(authToken);
     setCurrentUser(null);
     setAuthToken(null);
     setPassword('');
     setOtpCode('');
     setOtpSent(false);
     setOtpPreview(null);
-    setSuccessMsg('You have been signed out safely.');
+    setShowChangePasswordSection(false);
+    setSuccessMsg('You have been signed out safely. Token invalidated.');
   };
 
   return (
@@ -234,18 +306,146 @@ export default function LoginPage() {
                     gap: '0.45rem',
                     fontSize: '0.775rem',
                     color: '#94a3b8',
-                    marginBottom: '1.5rem',
+                    marginBottom: '1.25rem',
                   }}
                 >
                   <Database size={14} style={{ color: '#22d3ee' }} />
                   <span>Verified & synced with MySQL 8.0 (ecommerce_auth_db)</span>
                 </div>
 
+                {/* Change Password Section Toggle Button */}
+                <button
+                  type="button"
+                  className="btn-secondary-trigger"
+                  onClick={() => setShowChangePasswordSection(!showChangePasswordSection)}
+                  style={{ marginBottom: '1rem' }}
+                >
+                  <Key size={15} />
+                  <span>{showChangePasswordSection ? 'Hide Change Password' : 'Change Account Password'}</span>
+                </button>
+
+                {/* Collapsible Change Password Section */}
+                {showChangePasswordSection && (
+                  <div className="change-password-box">
+                    <h3 className="section-title">Change Password</h3>
+
+                    {changePasswordError && (
+                      <div className="alert-banner error">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>{changePasswordError}</span>
+                      </div>
+                    )}
+
+                    {changePasswordMsg && (
+                      <div className="alert-banner success">
+                        <CheckCircle2 size={16} className="shrink-0" />
+                        <span>{changePasswordMsg}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleChangePassword} noValidate>
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="currentPassword">
+                          Current Password
+                        </label>
+                        <div className="input-wrapper">
+                          <Lock size={16} className="input-icon" />
+                          <input
+                            id="currentPassword"
+                            type={showCurrentPassword ? 'text' : 'password'}
+                            className="glass-input"
+                            placeholder="Enter current password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="input-toggle-btn"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                          >
+                            {showCurrentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="dashNewPassword">
+                          New Password
+                        </label>
+                        <div className="input-wrapper">
+                          <Lock size={16} className="input-icon" />
+                          <input
+                            id="dashNewPassword"
+                            type={showNewPassword ? 'text' : 'password'}
+                            className="glass-input"
+                            placeholder="Min 8 chars with upper, lower, num, symbol"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="input-toggle-btn"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                          >
+                            {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="dashConfirmPassword">
+                          Confirm New Password
+                        </label>
+                        <div className="input-wrapper">
+                          <Lock size={16} className="input-icon" />
+                          <input
+                            id="dashConfirmPassword"
+                            type={showConfirmNewPassword ? 'text' : 'password'}
+                            className="glass-input"
+                            placeholder="Re-enter new password"
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="input-toggle-btn"
+                            onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                            aria-label={showConfirmNewPassword ? 'Hide confirm password' : 'Show confirm password'}
+                          >
+                            {showConfirmNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Visual Requirements Checklist */}
+                      <PasswordRequirements
+                        password={newPassword}
+                        confirmPassword={confirmNewPassword}
+                      />
+
+                      <button
+                        type="submit"
+                        className="btn-action-primary"
+                        style={{ height: '44px', fontSize: '0.875rem' }}
+                        disabled={changePasswordLoading}
+                      >
+                        <span>{changePasswordLoading ? 'Updating Password...' : 'Update Password'}</span>
+                      </button>
+                    </form>
+                  </div>
+                )}
+
                 {/* Sign Out Button */}
                 <button
                   type="button"
                   onClick={handleSignOut}
                   className="btn-signout"
+                  style={{ marginTop: '0.75rem' }}
                 >
                   <LogOut size={16} />
                   <span>Sign Out</span>
@@ -374,6 +574,13 @@ export default function LoginPage() {
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
                       </div>
+
+                      {/* Forgot Password Link */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.45rem' }}>
+                        <Link to="/forgot-password" className="nav-link-glow" style={{ fontSize: '0.8rem' }}>
+                          Forgot Password?
+                        </Link>
+                      </div>
                     </div>
                   )}
 
@@ -404,7 +611,6 @@ export default function LoginPage() {
                             </span>
                           </div>
 
-                          {/* 6 Individual Numeric Boxes with Auto-Focus Advancing */}
                           <OtpInput
                             value={otpCode}
                             onChange={setOtpCode}

@@ -19,6 +19,7 @@ import confetti from 'canvas-confetti';
 import BackgroundOrbs from '../components/BackgroundOrbs';
 import BrandHeader from '../components/BrandHeader';
 import OtpInput from '../components/OtpInput';
+import PasswordRequirements from '../components/PasswordRequirements';
 import { sendOtp, registerUser } from '../services/api';
 
 export default function SignupPage() {
@@ -111,13 +112,24 @@ export default function SignupPage() {
     setSuccessMsg('');
 
     // Validations
-    if (!fullName.trim()) {
-      setErrorMsg('Full Name is required.');
+    if (!fullName.trim() || fullName.trim().length < 3) {
+      setErrorMsg('Full Name must be between 3 and 100 characters long.');
       return;
     }
     if (!identifier.trim()) {
       setErrorMsg(`Please enter your ${identifierType === 'EMAIL' ? 'Email Address' : 'Phone Number'}.`);
       return;
+    }
+    if (identifierType === 'EMAIL' && !identifier.includes('@')) {
+      setErrorMsg('Please enter a valid email address (e.g. name@domain.com).');
+      return;
+    }
+    if (identifierType === 'PHONE') {
+      const digitsOnly = identifier.replace(/[^0-9]/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        setErrorMsg('Mobile number must contain between 10 and 15 digits.');
+        return;
+      }
     }
 
     if (verificationMode === 'PASSWORD') {
@@ -125,12 +137,28 @@ export default function SignupPage() {
         setErrorMsg('Please enter a secure password.');
         return;
       }
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters long.');
+      if (password.length < 8) {
+        setErrorMsg('Password must be at least 8 characters long.');
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        setErrorMsg('Password must include at least one uppercase letter (A-Z).');
+        return;
+      }
+      if (!/[a-z]/.test(password)) {
+        setErrorMsg('Password must include at least one lowercase letter (a-z).');
+        return;
+      }
+      if (!/\d/.test(password)) {
+        setErrorMsg('Password must include at least one numeric digit (0-9).');
+        return;
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+        setErrorMsg('Password must include at least one special character (!@#$%^&* etc.).');
         return;
       }
       if (password !== confirmPassword) {
-        setErrorMsg('Passwords do not match. Please verify your re-entered password.');
+        setErrorMsg('Confirmed password does not match the password.');
         return;
       }
     } else {
@@ -378,6 +406,12 @@ export default function SignupPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Password Security Checklist */}
+                  <PasswordRequirements
+                    password={password}
+                    confirmPassword={confirmPassword}
+                  />
                 </>
               )}
 
