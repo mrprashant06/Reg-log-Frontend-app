@@ -1,0 +1,197 @@
+/* ==========================================================================
+   AURA / ZARA-INSPIRED CUSTOMER DESIGN SYSTEM
+   Theme: Minimalist Fashion Editorial
+   Palette: Monochrome, High-Contrast Black & White with Subtle Neutral Grays
+   ========================================================================== */
+
+:root {
+  /* Customer Palette */
+  --aura-bg: #FFFFFF;
+  --aura-bg-subtle: #F7F7F7;
+  --aura-bg-hover: #EFEFEF;
+  --aura-text: #111111;
+  --aura-text-muted: #707070;
+  --aura-text-light: #999999;
+  --aura-border: #E5E5E5;
+  --aura-border-dark: #111111;
+  
+  /* Primary Action */
+  --aura-btn-bg: #111111;
+  --aura-btn-text: #FFFFFF;
+  --aura-btn-hover: #333333;
+  --aura-btn-outline-border: #111111;
+  
+  /* Feedback & Accents */
+  --aura-sale: #C62828;
+  --aura-success: #287D46;
+  --aura-warning: #B45309;
+  
+  /* Typography */
+  --aura-font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Arial', sans-serif;
+  --aura-font-editorial: 'Inter', 'Helvetica Neue', 'Arial', sans-serif;
+  
+  /* Layout & Spacing */
+  --aura-header-height: 72px;
+  --aura-container-max: 1600px;
+  --aura-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --aura-transition-image: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+}
+
+/* Base Customer Scoping */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--aura-font-primary);
+  background-color: var(--aura-bg);
+  color: var(--aura-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Typography Utility Classes */
+.aura-title-hero {
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.aura-title-section {
+  font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0 0 1.5rem 0;
+}
+
+.aura-title-sub {
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--aura-text-muted);
+}
+
+.aura-link-editorial {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--aura-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--aura-text);
+  padding-bottom: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.aura-link-editorial:hover {
+  opacity: 0.6;
+}
+
+/* Minimalist Button System */
+.aura-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--aura-transition);
+  text-decoration: none;
+  border-radius: 0; /* Strict Zara sharp geometric edges */
+}
+
+.aura-btn-primary {
+  background-color: var(--aura-btn-bg);
+  color: var(--aura-btn-text);
+  border-color: var(--aura-btn-bg);
+}
+
+.aura-btn-primary:hover:not(:disabled) {
+  background-color: var(--aura-btn-hover);
+  border-color: var(--aura-btn-hover);
+}
+
+.aura-btn-secondary {
+  background-color: var(--aura-bg);
+  color: var(--aura-text);
+  border-color: var(--aura-border-dark);
+}
+
+.aura-btn-secondary:hover:not(:disabled) {
+  background-color: var(--aura-text);
+  color: var(--aura-bg);
+}
+
+.aura-btn-ghost {
+  background-color: transparent;
+  color: var(--aura-text);
+  border-color: transparent;
+}
+
+.aura-btn-ghost:hover:not(:disabled) {
+  background-color: var(--aura-bg-subtle);
+}
+
+.aura-btn-white {
+  background-color: #FFFFFF;
+  color: #111111;
+  border-color: #FFFFFF;
+}
+
+.aura-btn-white:hover:not(:disabled) {
+  background-color: #F0F0F0;
+  border-color: #F0F0F0;
+}
+
+.aura-btn-sale {
+  background-color: var(--aura-sale);
+  color: #FFFFFF;
+  border-color: var(--aura-sale);
+}
+
+.aura-btn-sale:hover:not(:disabled) {
+  background-color: #A31F1F;
+}
+
+.aura-btn-full {
+  width: 100%;
+}
+
+.aura-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Badge System */
+.aura-badge-sale {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--aura-sale);
+  text-transform: uppercase;
+}
+
+.aura-badge-new {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--aura-text);
+  text-transform: uppercase;
+}
+
+.aura-badge-stock-low {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--aura-warning);
+  letter-spacing: 0.05em;
+}

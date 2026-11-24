@@ -1,0 +1,381 @@
+/* ==========================================================================
+   AURA / ZARA-INSPIRED CUSTOMER COMPONENTS
+   Product Cards, Secondary Image Hover, Wishlist Toggle, Size Selectors
+   ========================================================================== */
+
+/* Product Card Component (Zara / Massimo Dutti Editorial Style) */
+.aura-product-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--aura-bg);
+  text-decoration: none;
+  color: var(--aura-text);
+  transition: transform 0.3s ease;
+}
+
+.aura-product-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  background-color: var(--aura-bg-subtle);
+}
+
+/* Primary and Secondary Hover Image */
+.aura-product-img-primary,
+.aura-product-img-secondary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aura-product-img-primary {
+  opacity: 1;
+  z-index: 1;
+}
+
+.aura-product-img-secondary {
+  opacity: 0;
+  z-index: 2;
+}
+
+.aura-product-card:hover .aura-product-img-secondary {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.aura-product-card:hover .aura-product-img-primary {
+  transform: scale(1.03);
+}
+
+/* Wishlist Heart Button on Card */
+.aura-product-wishlist-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--aura-text);
+  transition: all 0.2s ease;
+  opacity: 0.85;
+}
+
+.aura-product-wishlist-btn:hover {
+  opacity: 1;
+  background: #FFFFFF;
+  transform: scale(1.1);
+}
+
+.aura-product-wishlist-btn.active {
+  color: var(--aura-sale);
+  opacity: 1;
+}
+
+/* Badges on Card */
+.aura-product-badges {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+}
+
+.aura-product-badge {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aura-product-badge.sale {
+  color: var(--aura-sale);
+  background-color: #FFFFFF;
+}
+
+/* Quick Add to Bag on Hover */
+.aura-quick-add-drawer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  padding: 10px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aura-product-card:hover .aura-quick-add-drawer {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.aura-quick-size-btn {
+  background: none;
+  border: 1px solid var(--aura-border);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aura-quick-size-btn:hover {
+  background-color: var(--aura-text);
+  color: #FFFFFF;
+  border-color: var(--aura-text);
+}
+
+/* Product Info */
+.aura-product-info {
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.aura-product-brand {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--aura-text-muted);
+}
+
+.aura-product-name {
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aura-product-prices {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.aura-product-price-current {
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.aura-product-price-original {
+  font-size: 0.82rem;
+  color: var(--aura-text-light);
+  text-decoration: line-through;
+}
+
+.aura-product-price-discount {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--aura-sale);
+  letter-spacing: 0.05em;
+}
+
+/* Color Dots */
+.aura-product-colors {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.aura-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Size Chips for Product Details */
+.aura-size-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.aura-size-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.aura-size-guide-btn {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: var(--aura-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aura-size-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.aura-size-chip {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--aura-border);
+  background-color: var(--aura-bg);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aura-size-chip:hover {
+  border-color: var(--aura-text);
+}
+
+.aura-size-chip.selected {
+  background-color: var(--aura-text);
+  color: #FFFFFF;
+  border-color: var(--aura-text);
+}
+
+.aura-size-chip.out-of-stock {
+  opacity: 0.4;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* Accordion for Details Page */
+.aura-accordion {
+  border-top: 1px solid var(--aura-border);
+}
+
+.aura-accordion-item {
+  border-bottom: 1px solid var(--aura-border);
+}
+
+.aura-accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0;
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--aura-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.aura-accordion-content {
+  padding-bottom: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--aura-text-muted);
+  line-height: 1.7;
+}
+
+/* Minimalist Search Overlay Modal */
+.aura-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  padding: 3rem 2rem;
+  animation: auraFadeIn 0.25s ease;
+}
+
+@keyframes auraFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.aura-search-bar-wrap {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid var(--aura-text);
+  padding-bottom: 0.75rem;
+}
+
+.aura-search-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: clamp(1.2rem, 3vw, 2.2rem);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--aura-text);
+}
+
+.aura-search-input::placeholder {
+  color: var(--aura-text-light);
+}
+
+.aura-search-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--aura-text);
+}
+
+.aura-search-results {
+  max-width: 1200px;
+  width: 100%;
+  margin: 3rem auto 0 auto;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2rem;
+}

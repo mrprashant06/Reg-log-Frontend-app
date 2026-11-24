@@ -2,8 +2,8 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+export default function ProtectedRoute({ children, requireAdmin = false }) {
+  const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -16,26 +16,33 @@ export default function ProtectedRoute({ children }) {
           alignItems: 'center',
           justifyContent: 'center',
           gap: '1rem',
-          color: '#94a3b8',
+          color: '#707070',
         }}
       >
         <div
           style={{
-            width: '36px',
-            height: '36px',
-            border: '3px solid rgba(6, 182, 212, 0.2)',
-            borderTopColor: '#06b6d4',
+            width: '32px',
+            height: '32px',
+            border: '2px solid #E5E5E5',
+            borderTopColor: '#111111',
             borderRadius: '50%',
             animation: 'spin 0.8s linear infinite',
           }}
         />
-        <span>Checking authentication...</span>
+        <span style={{ fontSize: '0.8rem', letterSpacing: '0.05em' }}>VERIFYING ACCESS...</span>
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  if (requireAdmin) {
+    const isAdmin = user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ADMIN');
+    if (!isAdmin) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return children;

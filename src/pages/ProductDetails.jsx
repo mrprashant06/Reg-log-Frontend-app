@@ -1,31 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import CustomerHeader from '../components/CustomerHeader';
 import ProductCard from '../components/ProductCard';
 import { getProductById, getProductRecommendations } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import {
-  Star,
-  ShoppingCart,
-  Check,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
-  Sparkles,
-  ChevronRight,
-  Minus,
-  Plus,
-  ArrowLeft,
-  AlertCircle,
-  Share2,
-} from 'lucide-react';
+import { useWishlist } from '../context/WishlistContext';
+import { Heart, ShoppingBag, Check, ChevronDown, ChevronUp, Ruler, X } from 'lucide-react';
 
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, isCartLoading } = useCart();
+  const { addToCart } = useCart();
   const { isAuthenticated, authToken } = useAuth();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   const [product, setProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState('');
@@ -36,8 +24,14 @@ export default function ProductDetails() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [addingToBag, setAddingToBag] = useState(false);
   const [addedSuccess, setAddedSuccess] = useState(false);
-  const [actionError, setActionError] = useState('');
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
+
+  // Accordion states
+  const [openAccordion, setOpenAccordion] = useState('materials');
+
+  const isWishlisted = isInWishlist(product?.id);
 
   useEffect(() => {
     async function loadData() {
@@ -47,12 +41,11 @@ export default function ProductDetails() {
         const data = await getProductById(id, authToken);
         setProduct(data);
 
-        // Pre-select primary image
-        if (data.imageUrls && data.imageUrls.length > 0) {
-          setSelectedImage(data.imageUrls[0]);
+        const imgs = data.images?.map(i => i.imageUrl) || data.imageUrls || [];
+        if (imgs.length > 0) {
+          setSelectedImage(imgs[0]);
         }
 
-        // Pre-select first size and color
         if (data.availableSizes && data.availableSizes.length > 0) {
           setSelectedSize(data.availableSizes[0]);
         }
@@ -60,69 +53,57 @@ export default function ProductDetails() {
           setSelectedColor(data.availableColors[0]);
         }
 
-        // Related products
-        if (data.relatedProducts && data.relatedProducts.length > 0) {
-          setRelatedProducts(data.relatedProducts);
-        } else {
-          const recs = await getProductRecommendations(id, 4, authToken);
-          setRelatedProducts(recs);
-        }
+        const related = await getProductRecommendations(id, 4);
+        setRelatedProducts(related || []);
       } catch (err) {
-        setError(err.message || 'Product details not found');
+        console.error('Failed to load product details:', err);
+        setError(err.message || 'Product not found');
       } finally {
         setLoading(false);
       }
     }
     loadData();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   }, [id, authToken]);
 
-  const handleAddToCart = async () => {
+  const handleAddToBag = async () => {
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: `/products/${id}` } });
+      navigate('/login', { state: { from: window.location.pathname } });
       return;
     }
 
     try {
-      setActionError('');
-      // Match variant if applicable
-      let variantId = null;
-      if (product.variants && product.variants.length > 0) {
-        const match = product.variants.find(
-          (v) =>
-            (!selectedSize || v.size === selectedSize) &&
-            (!selectedColor || v.color === selectedColor)
-        );
-        if (match) variantId = match.id;
-      }
-
+      setAddingToBag(true);
       await addToCart({
         productId: product.id,
-        variantId,
-        selectedSize: selectedSize || null,
-        selectedColor: selectedColor || null,
-        quantity,
+        selectedSize: selectedSize || 'Standard',
+        selectedColor: selectedColor || 'Standard',
+        quantity: quantity,
       });
-
       setAddedSuccess(true);
-      setTimeout(() => setAddedSuccess(false), 2500);
+      setTimeout(() => setAddedSuccess(false), 3000);
     } catch (err) {
-      setActionError(err.message || 'Failed to add item to cart');
+      console.error('Failed to add to bag:', err);
+    } finally {
+      setAddingToBag(false);
     }
   };
 
   const formatPrice = (val) => {
     if (val === undefined || val === null) return '₹0';
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(val);
   };
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-        <Navbar />
-        <div style={{ maxWidth: '1280px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
-          <div className="spinner-glow" style={{ margin: '0 auto 1.5rem', width: '48px', height: '48px', borderRadius: '50%', border: '3px solid rgba(6, 182, 212, 0.2)', borderTopColor: '#06b6d4', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#94a3b8' }}>Loading product details from MySQL...</p>
+      <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+        <CustomerHeader />
+        <div style={{ textAlign: 'center', padding: '10rem 2rem', fontSize: '0.85rem', color: '#707070' }}>
+          LOADING GARMENT DETAILS...
         </div>
       </div>
     );
@@ -130,435 +111,337 @@ export default function ProductDetails() {
 
   if (error || !product) {
     return (
-      <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-        <Navbar />
-        <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
-          <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 1rem' }} />
-          <h2>Product Not Found</h2>
-          <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>{error || 'This product does not exist or has been removed.'}</p>
-          <Link to="/products" style={{ display: 'inline-flex', padding: '0.65rem 1.5rem', borderRadius: '10px', background: 'linear-gradient(135deg, #06b6d4, #2563eb)', color: '#ffffff', textDecoration: 'none', fontWeight: 600 }}>
-            Back to Products
+      <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+        <CustomerHeader />
+        <div style={{ textAlign: 'center', padding: '8rem 2rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 300, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            GARMENT NOT FOUND
+          </h2>
+          <Link to="/products" className="aura-btn aura-btn-primary" style={{ marginTop: '2rem' }}>
+            BACK TO COLLECTION
           </Link>
         </div>
       </div>
     );
   }
 
+  const allImages = product.images?.map(i => i.imageUrl) || product.imageUrls || [product.imageUrl];
+
   return (
-    <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-      <Navbar />
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+      <CustomerHeader />
 
-      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.25rem 5rem' }}>
-        {/* Breadcrumb Navigation */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          <Link to="/dashboard" style={{ color: '#94a3b8', textDecoration: 'none' }}>Home</Link>
-          <ChevronRight size={14} />
-          <Link to="/products" style={{ color: '#94a3b8', textDecoration: 'none' }}>Products</Link>
-          <ChevronRight size={14} />
-          {product.categoryName && (
-            <>
-              <Link to={`/products?categorySlug=${product.categorySlug}`} style={{ color: '#94a3b8', textDecoration: 'none' }}>
-                {product.categoryName}
-              </Link>
-              <ChevronRight size={14} />
-            </>
-          )}
-          <span style={{ color: '#06b6d4', fontWeight: 600 }}>{product.name}</span>
-        </nav>
+      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '2rem' }}>
+        {/* Breadcrumb */}
+        <div style={{ marginBottom: '2rem', fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070' }}>
+          <Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>HOME</Link>
+          <span style={{ margin: '0 8px' }}>/</span>
+          <Link to="/products" style={{ color: 'inherit', textDecoration: 'none' }}>COLLECTION</Link>
+          <span style={{ margin: '0 8px' }}>/</span>
+          <span style={{ color: '#111111' }}>{product.name}</span>
+        </div>
 
-        {/* 2-Column Product Detail Layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '3rem', marginBottom: '4rem' }}>
-          {/* Left Column: Image Gallery */}
-          <div>
-            {/* Primary Main Image */}
-            <div
-              style={{
-                width: '100%',
-                borderRadius: '24px',
-                overflow: 'hidden',
-                background: 'rgba(15, 23, 42, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
-                position: 'relative',
-                paddingTop: '100%',
-              }}
-            >
-              <img
-                src={selectedImage || product.imageUrls?.[0]}
-                alt={product.name}
+        {/* 2-Column Editorial Layout */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.2fr 0.8fr',
+            gap: '4rem',
+            alignItems: 'start',
+          }}
+        >
+          {/* Left Column: Stacked Editorial Image Gallery (Zara Style) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {allImages.map((imgUrl, idx) => (
+              <div
+                key={idx}
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
+                  position: 'relative',
                   width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  transition: 'transform 0.4s ease',
-                }}
-              />
-            </div>
-
-            {/* Thumbnail Strip */}
-            {product.imageUrls && product.imageUrls.length > 1 && (
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                {product.imageUrls.map((img, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setSelectedImage(img)}
-                    style={{
-                      width: '74px',
-                      height: '74px',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      padding: 0,
-                      background: 'none',
-                      border: selectedImage === img ? '2px solid #06b6d4' : '1px solid rgba(255, 255, 255, 0.15)',
-                      cursor: 'pointer',
-                      flexShrink: 0,
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <img src={img} alt={`Thumbnail ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Information, Pricing & Action Selectors */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Brand & Badge Header */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                <span
-                  style={{
-                    fontSize: '0.85rem',
-                    textTransform: 'uppercase',
-                    color: '#06b6d4',
-                    fontWeight: 700,
-                    letterSpacing: '1.5px',
-                  }}
-                >
-                  {product.brand}
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    padding: '0.3rem 0.75rem',
-                    borderRadius: '9999px',
-                    background: product.availableStock > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                    color: product.availableStock > 0 ? '#34d399' : '#f87171',
-                    fontWeight: 700,
-                    border: product.availableStock > 0 ? '1px solid rgba(52, 211, 153, 0.3)' : '1px solid rgba(248, 113, 113, 0.3)',
-                  }}
-                >
-                  {product.availableStock > 0 ? `In Stock (${product.availableStock} available)` : 'Out of Stock'}
-                </span>
-              </div>
-
-              <h1
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '2rem',
-                  fontWeight: 800,
-                  color: '#f8fafc',
-                  margin: '0.5rem 0 0.75rem',
-                  lineHeight: 1.2,
+                  backgroundColor: '#F7F7F7',
+                  overflow: 'hidden',
                 }}
               >
+                <img
+                  src={imgUrl}
+                  alt={`${product.name} angle ${idx + 1}`}
+                  style={{
+                    width: '100%',
+                    display: 'block',
+                    objectFit: 'cover',
+                  }}
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Right Column: Sticky Product Purchase Details */}
+          <div style={{ position: 'sticky', top: '100px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div>
+              <span className="aura-product-brand" style={{ fontSize: '0.75rem', letterSpacing: '0.15em' }}>
+                {product.brand || 'AURA'}
+              </span>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 400, letterSpacing: '0.04em', margin: '0.35rem 0 0.75rem 0' }}>
                 {product.name}
               </h1>
 
-              {/* Rating & Reviews */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#eab308' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={16}
-                      fill={i < Math.floor(product.rating || 5) ? '#eab308' : 'none'}
-                      color="#eab308"
-                    />
-                  ))}
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{product.rating?.toFixed(1) || '4.8'}</span>
-                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>({product.reviewsCount || 120} verified customer ratings)</span>
-              </div>
-            </div>
-
-            {/* Price Box */}
-            <div
-              style={{
-                padding: '1.25rem',
-                borderRadius: '16px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '1rem',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '2.25rem',
-                  fontWeight: 800,
-                  color: '#ffffff',
-                }}
-              >
-                {formatPrice(product.sellingPrice)}
-              </span>
-              {product.originalPrice && product.originalPrice > product.sellingPrice && (
-                <>
-                  <span style={{ fontSize: '1.15rem', color: '#64748b', textDecoration: 'line-through' }}>
+              <div className="aura-product-prices" style={{ marginBottom: '1.25rem' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 500 }}>
+                  {formatPrice(product.sellingPrice)}
+                </span>
+                {product.originalPrice && product.originalPrice > product.sellingPrice && (
+                  <span style={{ fontSize: '1rem', color: '#999999', textDecoration: 'line-through' }}>
                     {formatPrice(product.originalPrice)}
                   </span>
-                  <span
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      color: '#f87171',
-                      border: '1px solid rgba(239, 68, 68, 0.4)',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Save {product.discountPercentage}%
+                )}
+                {product.discountPercentage > 0 && (
+                  <span className="aura-product-price-discount" style={{ fontSize: '0.85rem' }}>
+                    -{product.discountPercentage}% OFF
                   </span>
-                </>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Product Description */}
-            <div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>
-                Description
-              </h3>
-              <p style={{ color: '#94a3b8', fontSize: '0.925rem', lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: '0.85rem', color: '#707070', lineHeight: 1.7, margin: 0 }}>
                 {product.description}
               </p>
             </div>
 
-            {/* Size Selector */}
-            {product.availableSizes && product.availableSizes.length > 0 && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#e2e8f0' }}>Select Size:</label>
-                  <span style={{ fontSize: '0.8rem', color: '#06b6d4', fontWeight: 600 }}>{selectedSize}</span>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {product.availableSizes.map((size) => {
-                    const isSelected = selectedSize === size;
-                    return (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => setSelectedSize(size)}
-                        style={{
-                          minWidth: '44px',
-                          height: '42px',
-                          padding: '0 0.85rem',
-                          borderRadius: '10px',
-                          background: isSelected ? 'linear-gradient(135deg, #06b6d4, #2563eb)' : 'rgba(255, 255, 255, 0.06)',
-                          border: isSelected ? '1px solid #06b6d4' : '1px solid rgba(255, 255, 255, 0.12)',
-                          color: '#ffffff',
-                          fontWeight: isSelected ? 700 : 500,
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {size}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Colour Selector */}
+            {/* Color Swatches */}
             {product.availableColors && product.availableColors.length > 0 && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#e2e8f0' }}>Select Colour:</label>
-                  <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 600 }}>{selectedColor}</span>
+              <div style={{ borderTop: '1px solid #E5E5E5', paddingTop: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                  <span>COLOUR: {selectedColor}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {product.availableColors.map((color) => {
-                    const isSelected = selectedColor === color;
-                    return (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setSelectedColor(color)}
-                        style={{
-                          padding: '0.45rem 1rem',
-                          borderRadius: '9999px',
-                          background: isSelected ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                          border: isSelected ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
-                          color: isSelected ? '#38bdf8' : '#cbd5e1',
-                          fontWeight: isSelected ? 700 : 500,
-                          fontSize: '0.85rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {color}
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {product.availableColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      style={{
+                        padding: '6px 12px',
+                        border: selectedColor === color ? '1px solid #111111' : '1px solid #E5E5E5',
+                        background: '#FFFFFF',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        fontWeight: selectedColor === color ? 600 : 400,
+                      }}
+                    >
+                      {color}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Quantity Selector & Add to Cart Action */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '12px',
-                  padding: '0.2rem',
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={quantity <= 1}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <Minus size={16} />
-                </button>
-                <span style={{ width: '40px', textAlign: 'center', fontWeight: 700, fontSize: '0.95rem' }}>
-                  {quantity}
+            {/* Size Selector with Stock Warning */}
+            <div style={{ borderTop: '1px solid #E5E5E5', paddingTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  SELECT SIZE
                 </span>
                 <button
-                  type="button"
-                  disabled={quantity >= product.availableStock}
-                  onClick={() => setQuantity((q) => q + 1)}
+                  onClick={() => setShowSizeGuide(true)}
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: 'transparent',
+                    background: 'none',
                     border: 'none',
-                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: '#707070',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: quantity >= product.availableStock ? 'not-allowed' : 'pointer',
+                    gap: '4px',
                   }}
                 >
-                  <Plus size={16} />
+                  <Ruler size={13} /> SIZE GUIDE
                 </button>
               </div>
 
+              <div className="aura-size-chips">
+                {(product.availableSizes && product.availableSizes.length > 0
+                  ? product.availableSizes
+                  : ['XS', 'S', 'M', 'L', 'XL']
+                ).map((size) => (
+                  <button
+                    key={size}
+                    className={`aura-size-chip ${selectedSize === size ? 'selected' : ''}`}
+                    onClick={() => setSelectedSize(size)}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+
+              {product.availableStock > 0 && product.availableStock <= 5 && (
+                <p style={{ fontSize: '0.72rem', color: '#B45309', margin: '0.75rem 0 0 0', letterSpacing: '0.05em' }}>
+                  FEW ITEMS LEFT IN STOCK ({product.availableStock} remaining)
+                </p>
+              )}
+            </div>
+
+            {/* Primary Action Buttons: Add to Bag & Wishlist */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
               <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={product.availableStock <= 0 || isCartLoading}
-                style={{
-                  flex: 1,
-                  minWidth: '220px',
-                  height: '50px',
-                  borderRadius: '12px',
-                  background: addedSuccess
-                    ? 'linear-gradient(135deg, #10b981, #059669)'
-                    : 'linear-gradient(135deg, #06b6d4, #2563eb)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.6rem',
-                  cursor: product.availableStock <= 0 ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 8px 25px rgba(6, 182, 212, 0.4)',
-                  transition: 'all 0.2s ease',
-                }}
+                onClick={handleAddToBag}
+                disabled={addingToBag}
+                className="aura-btn aura-btn-primary aura-btn-full"
+                style={{ padding: '1rem', fontSize: '0.8rem' }}
               >
-                {addedSuccess ? (
-                  <>
-                    <Check size={20} />
-                    <span>Added to Cart!</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart size={19} />
-                    <span>Add to Cart ({formatPrice(product.sellingPrice * quantity)})</span>
-                  </>
-                )}
+                <ShoppingBag size={16} />
+                {addingToBag ? 'ADDING...' : addedSuccess ? 'ADDED TO SHOPPING BAG' : 'ADD TO BAG'}
+              </button>
+
+              <button
+                onClick={() => toggleWishlist(product.id)}
+                className="aura-btn aura-btn-secondary aura-btn-full"
+                style={{ padding: '0.85rem', fontSize: '0.8rem' }}
+              >
+                <Heart
+                  size={16}
+                  strokeWidth={1.5}
+                  fill={isWishlisted ? '#C62828' : 'none'}
+                  color={isWishlisted ? '#C62828' : '#111111'}
+                />
+                {isWishlisted ? 'SAVED TO WISHLIST' : 'SAVE TO WISHLIST'}
               </button>
             </div>
 
-            {actionError && (
-              <div style={{ color: '#f87171', fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', padding: '0.6rem 1rem', borderRadius: '8px' }}>
-                {actionError}
+            {/* Minimalist Accordions for Materials, Care, Shipping */}
+            <div className="aura-accordion" style={{ marginTop: '1.5rem' }}>
+              <div className="aura-accordion-item">
+                <button
+                  className="aura-accordion-trigger"
+                  onClick={() => setOpenAccordion(openAccordion === 'materials' ? '' : 'materials')}
+                >
+                  <span>COMPOSITION & CARE</span>
+                  {openAccordion === 'materials' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                {openAccordion === 'materials' && (
+                  <div className="aura-accordion-content">
+                    Crafted from 100% natural fibers with certified traceability. To ensure garment longevity, hand wash in cold water or dry clean. Do not tumble dry. Low temperature iron on reverse.
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Trust Assurance Bullets */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                <Truck size={16} style={{ color: '#06b6d4' }} />
-                <span>Express 3-5 day delivery</span>
+              <div className="aura-accordion-item">
+                <button
+                  className="aura-accordion-trigger"
+                  onClick={() => setOpenAccordion(openAccordion === 'shipping' ? '' : 'shipping')}
+                >
+                  <span>DELIVERY & FREE RETURNS</span>
+                  {openAccordion === 'shipping' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                {openAccordion === 'shipping' && (
+                  <div className="aura-accordion-content">
+                    Standard delivery: 2-4 business days. Free delivery on all orders above ₹999. Complimentary returns accepted within 30 days of purchase in original condition with tags intact.
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                <RotateCcw size={16} style={{ color: '#10b981' }} />
-                <span>7-Day Return Policy</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                <ShieldCheck size={16} style={{ color: '#3b82f6' }} />
-                <span>100% Brand Authenticity</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                <Sparkles size={16} style={{ color: '#a855f7' }} />
-                <span>Razorpay Secured</span>
+
+              <div className="aura-accordion-item">
+                <button
+                  className="aura-accordion-trigger"
+                  onClick={() => setOpenAccordion(openAccordion === 'sustainability' ? '' : 'sustainability')}
+                >
+                  <span>ORIGIN & SUSTAINABILITY</span>
+                  {openAccordion === 'sustainability' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                {openAccordion === 'sustainability' && (
+                  <div className="aura-accordion-content">
+                    Produced under ethical workplace protocols with closed-loop dyeing technology to reduce water consumption by 65%. Packaging is 100% recycled biodegradable paperboard.
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Module 2 & 4: Related & Recommended Products */}
+        {/* Complete The Look Section */}
         {relatedProducts.length > 0 && (
-          <section style={{ marginTop: '5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '3rem' }}>
-            <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-              Similar Products You Might Like
+          <section style={{ marginTop: '8rem', borderTop: '1px solid #E5E5E5', paddingTop: '4rem' }}>
+            <span className="aura-title-sub">YOU MAY ALSO LIKE</span>
+            <h2 className="aura-title-section" style={{ margin: '0.25rem 0 2rem 0' }}>
+              COMPLETE THE LOOK
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '2rem' }}>
-              Handpicked matching items from {product.brand} and {product.categoryName || 'the same department'}
-            </p>
-
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: '1.5rem',
+                gap: '2rem 1.5rem',
               }}
             >
-              {relatedProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
+              {relatedProducts.map((rel) => (
+                <ProductCard key={rel.id} product={rel} />
               ))}
             </div>
           </section>
         )}
       </main>
+
+      {/* Size Guide Modal */}
+      {showSizeGuide && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '1rem',
+          }}
+          onClick={() => setShowSizeGuide(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              maxWidth: '550px',
+              width: '100%',
+              padding: '2.5rem',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 400, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+                SIZE GUIDE (CM)
+              </h3>
+              <button
+                onClick={() => setShowSizeGuide(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #111111' }}>
+                  <th style={{ padding: '8px' }}>SIZE</th>
+                  <th style={{ padding: '8px' }}>CHEST / BUST</th>
+                  <th style={{ padding: '8px' }}>WAIST</th>
+                  <th style={{ padding: '8px' }}>HIPS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #E5E5E5' }}><td style={{ padding: '8px' }}>XS</td><td style={{ padding: '8px' }}>82 - 86</td><td style={{ padding: '8px' }}>62 - 66</td><td style={{ padding: '8px' }}>88 - 92</td></tr>
+                <tr style={{ borderBottom: '1px solid #E5E5E5' }}><td style={{ padding: '8px' }}>S</td><td style={{ padding: '8px' }}>86 - 90</td><td style={{ padding: '8px' }}>66 - 70</td><td style={{ padding: '8px' }}>92 - 96</td></tr>
+                <tr style={{ borderBottom: '1px solid #E5E5E5' }}><td style={{ padding: '8px' }}>M</td><td style={{ padding: '8px' }}>90 - 94</td><td style={{ padding: '8px' }}>70 - 74</td><td style={{ padding: '8px' }}>96 - 100</td></tr>
+                <tr style={{ borderBottom: '1px solid #E5E5E5' }}><td style={{ padding: '8px' }}>L</td><td style={{ padding: '8px' }}>94 - 98</td><td style={{ padding: '8px' }}>74 - 78</td><td style={{ padding: '8px' }}>100 - 104</td></tr>
+                <tr style={{ borderBottom: '1px solid #E5E5E5' }}><td style={{ padding: '8px' }}>XL</td><td style={{ padding: '8px' }}>98 - 104</td><td style={{ padding: '8px' }}>78 - 84</td><td style={{ padding: '8px' }}>104 - 110</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

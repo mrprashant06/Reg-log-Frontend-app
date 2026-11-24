@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import CustomerHeader from '../components/CustomerHeader';
 import { getOrderById, cancelOrder, returnOrder } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -10,23 +10,13 @@ import {
   Truck,
   CheckCircle2,
   XCircle,
-  RotateCcw,
   ArrowLeft,
   MapPin,
   CreditCard,
   ShieldCheck,
   AlertCircle,
-  Loader2,
+  X,
 } from 'lucide-react';
-
-const STATUS_STEPS = [
-  { key: 'ORDER_PLACED', label: 'Order Placed' },
-  { key: 'CONFIRMED', label: 'Confirmed' },
-  { key: 'PROCESSING', label: 'Processing' },
-  { key: 'SHIPPED', label: 'Shipped' },
-  { key: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
-  { key: 'DELIVERED', label: 'Delivered' },
-];
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -37,101 +27,77 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [showCancelPrompt, setShowCancelPrompt] = useState(false);
+  const [showReturnPrompt, setShowReturnPrompt] = useState(false);
   const [reason, setReason] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+
+  const fetchOrder = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await getOrderById(id, authToken);
+      setOrder(data);
+    } catch (err) {
+      setError(err.message || 'Failed to retrieve order details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: `/orders/${id}` } });
       return;
     }
+    fetchOrder();
+  }, [id, isAuthenticated, authToken]);
 
-    async function loadOrder() {
-      try {
-        setLoading(true);
-        setError('');
-        const data = await getOrderById(id, authToken);
-        setOrder(data);
-      } catch (err) {
-        setError(err.message || 'Failed to find order');
-      } finally {
-        setLoading(false);
-      }
+  const handleCancelOrder = async () => {
+    try {
+      setActionLoading(true);
+      await cancelOrder(order.id, reason.trim() || 'Customer requested', authToken);
+      setShowCancelPrompt(false);
+      setReason('');
+      setActionMsg('Order successfully cancelled.');
+      fetchOrder();
+    } catch (err) {
+      setError(err.message || 'Failed to cancel order');
+    } finally {
+      setActionLoading(false);
     }
-    loadOrder();
-  }, [id, authToken, isAuthenticated, navigate]);
+  };
+
+  const handleReturnOrder = async () => {
+    try {
+      setActionLoading(true);
+      await returnOrder(order.id, reason.trim() || 'Customer return', authToken);
+      setShowReturnPrompt(false);
+      setReason('');
+      setActionMsg('Return request submitted successfully.');
+      fetchOrder();
+    } catch (err) {
+      setError(err.message || 'Failed to submit return request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const formatPrice = (val) => {
     if (val === undefined || val === null) return '₹0';
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
-  };
-
-  const formattedDate = order?.createdAt
-    ? new Date(order.createdAt).toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '';
-
-  const getStepIndex = (statusKey) => {
-    if (statusKey === 'CANCELLED' || statusKey === 'RETURNED') return -1;
-    return STATUS_STEPS.findIndex((s) => s.key === statusKey);
-  };
-
-  const currentStepIdx = order ? getStepIndex(order.orderStatus) : 0;
-  const isCancellable = order && (order.orderStatus === 'ORDER_PLACED' || order.orderStatus === 'CONFIRMED');
-  const isReturnable = order && order.orderStatus === 'DELIVERED';
-
-  const handleCancel = async () => {
-    if (!reason.trim()) {
-      alert('Please specify reason for cancellation');
-      return;
-    }
-    try {
-      setActionLoading(true);
-      const updated = await cancelOrder(order.id, reason.trim(), authToken);
-      setOrder(updated);
-      setCancelModalOpen(false);
-      setReason('');
-      setActionMsg('Order successfully cancelled.');
-    } catch (err) {
-      alert(err.message || 'Cancellation failed');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReturn = async () => {
-    if (!reason.trim()) {
-      alert('Please specify reason for return');
-      return;
-    }
-    try {
-      setActionLoading(true);
-      const updated = await returnOrder(order.id, reason.trim(), authToken);
-      setOrder(updated);
-      setReturnModalOpen(false);
-      setReason('');
-      setActionMsg('Return request submitted.');
-    } catch (err) {
-      alert(err.message || 'Return request failed');
-    } finally {
-      setActionLoading(false);
-    }
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(val);
   };
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-        <Navbar />
-        <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center' }}>
-          <Loader2 size={36} className="animate-spin" style={{ color: '#06b6d4', margin: '0 auto 1rem' }} />
-          <p style={{ color: '#94a3b8' }}>Loading order tracking status...</p>
+      <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+        <CustomerHeader />
+        <div style={{ textAlign: 'center', padding: '10rem 2rem', fontSize: '0.85rem', color: '#707070' }}>
+          LOADING ORDER DETAILS...
         </div>
       </div>
     );
@@ -139,370 +105,233 @@ export default function OrderDetails() {
 
   if (error || !order) {
     return (
-      <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-        <Navbar />
-        <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
-          <AlertCircle size={48} style={{ color: '#ef4444', margin: '0 auto 1rem' }} />
-          <h2>Order Not Found</h2>
-          <p style={{ color: '#94a3b8', margin: '0.5rem 0 1.5rem' }}>{error}</p>
-          <Link to="/orders" style={{ display: 'inline-flex', padding: '0.65rem 1.5rem', borderRadius: '10px', background: '#06b6d4', color: '#ffffff', textDecoration: 'none', fontWeight: 600 }}>
-            Back to My Orders
+      <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+        <CustomerHeader />
+        <div style={{ textAlign: 'center', padding: '8rem 2rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 300, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            ORDER NOT FOUND
+          </h2>
+          <Link to="/orders" className="aura-btn aura-btn-primary" style={{ marginTop: '2rem' }}>
+            BACK TO ORDERS
           </Link>
         </div>
       </div>
     );
   }
 
+  const formattedDate = order.createdAt
+    ? new Date(order.createdAt).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Recent';
+
   return (
-    <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-      <Navbar />
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+      <CustomerHeader />
 
-      <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '2.5rem 1.25rem 5rem' }}>
-        {/* Top Back Link */}
-        <Link
-          to="/orders"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            color: '#94a3b8',
-            textDecoration: 'none',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            marginBottom: '1.5rem',
-          }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to My Orders</span>
-        </Link>
-
-        {/* Order Header Card */}
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '24px',
-            padding: '2rem',
-            backdropFilter: 'blur(20px)',
-            marginBottom: '2rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+      <main style={{ maxWidth: '1200px', margin: '3rem auto 6rem auto', padding: '0 2rem' }}>
+        {/* Breadcrumb & Title */}
+        <div style={{ marginBottom: '2rem' }}>
+          <Link to="/orders" style={{ fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            &larr; BACK TO ALL ORDERS
+          </Link>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '0.75rem', borderBottom: '1px solid #E5E5E5', paddingBottom: '1.5rem' }}>
             <div>
-              <div style={{ fontSize: '0.8rem', color: '#06b6d4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                Order Summary & Tracking
-              </div>
-              <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.85rem', fontWeight: 800, margin: '0.25rem 0 0' }}>
-                Order #{order.orderNumber}
+              <span className="aura-title-sub">ORDER REFERENCE</span>
+              <h1 className="aura-title-section" style={{ margin: '0.25rem 0 0 0' }}>
+                #{order.orderNumber || order.id}
               </h1>
-              <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                Placed on {formattedDate}
-              </div>
             </div>
-
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Payable</div>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.75rem', fontWeight: 800, color: '#22d3ee' }}>
-                {formatPrice(order.totalAmount)}
-              </div>
-            </div>
+            <span style={{ fontSize: '0.85rem', color: '#707070' }}>
+              PLACED ON {formattedDate}
+            </span>
           </div>
-
-          {actionMsg && (
-            <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', marginBottom: '1.5rem', fontWeight: 600, fontSize: '0.875rem' }}>
-              {actionMsg}
-            </div>
-          )}
-
-          {/* Visual Order Tracking Progress Bar */}
-          {order.orderStatus !== 'CANCELLED' && order.orderStatus !== 'RETURNED' ? (
-            <div style={{ margin: '2rem 0 1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
-                {STATUS_STEPS.map((step, idx) => {
-                  const isDone = idx <= currentStepIdx;
-                  const isCurrent = idx === currentStepIdx;
-                  return (
-                    <div
-                      key={step.key}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        flex: 1,
-                        position: 'relative',
-                        zIndex: 2,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          background: isDone ? '#06b6d4' : 'rgba(255, 255, 255, 0.1)',
-                          color: isDone ? '#0b1120' : '#94a3b8',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.8rem',
-                          boxShadow: isCurrent ? '0 0 20px #06b6d4' : 'none',
-                          border: isCurrent ? '2px solid #ffffff' : 'none',
-                        }}
-                      >
-                        {isDone ? <CheckCircle2 size={16} /> : idx + 1}
-                      </div>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          color: isDone ? '#f8fafc' : '#64748b',
-                          fontWeight: isCurrent ? 700 : 500,
-                          marginTop: '0.5rem',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {step.label}
-                      </span>
-                    </div>
-                  );
-                })}
-
-                {/* Background Line Connector */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '16px',
-                    left: '8%',
-                    right: '8%',
-                    height: '2px',
-                    background: 'rgba(255, 255, 255, 0.12)',
-                    zIndex: 1,
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '1.25rem',
-                borderRadius: '14px',
-                background: order.orderStatus === 'CANCELLED' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(236, 72, 153, 0.1)',
-                border: `1px solid ${order.orderStatus === 'CANCELLED' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(236, 72, 153, 0.3)'}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                color: order.orderStatus === 'CANCELLED' ? '#f87171' : '#f472b6',
-              }}
-            >
-              {order.orderStatus === 'CANCELLED' ? <XCircle size={24} /> : <RotateCcw size={24} />}
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '1rem' }}>
-                  {order.orderStatus === 'CANCELLED' ? 'Order Cancelled' : 'Return In Progress'}
-                </div>
-                <div style={{ fontSize: '0.85rem' }}>
-                  Reason: {order.cancellationReason || order.returnReason || 'Customer requested'}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* 2-Column Info: Items List & Snapshot Receipt */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-          {/* Purchased Items */}
-          <div
-            style={{
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '20px',
-              padding: '1.75rem',
-            }}
-          >
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 1.25rem' }}>
-              Items in this Shipment ({order.items?.length || 0})
+        {actionMsg && (
+          <div style={{ padding: '0.85rem 1.25rem', backgroundColor: '#DEF7EC', color: '#03543F', fontSize: '0.8rem', marginBottom: '2rem' }}>
+            {actionMsg}
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr', gap: '4rem', alignItems: 'start' }}>
+          {/* Left Column: Order Garments */}
+          <div>
+            <h3 style={{ fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 1.5rem 0' }}>
+              PURCHASED GARMENTS ({order.items?.length || 0})
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {(order.items || []).map((item) => (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <img
-                      src={item.productImageUrl}
-                      alt={item.productName}
-                      style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'cover' }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#06b6d4', textTransform: 'uppercase', fontWeight: 700 }}>
-                        {item.productBrand}
-                      </div>
-                      <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: '0.9rem' }}>
-                        {item.productName}
-                      </div>
-                      <div style={{ fontSize: '0.775rem', color: '#94a3b8' }}>
-                        Qty: {item.quantity} {item.selectedSize ? `• Size ${item.selectedSize}` : ''} {item.selectedColor ? `• ${item.selectedColor}` : ''}
-                      </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid #E5E5E5' }}>
+              {order.items?.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '100px 1fr auto',
+                    gap: '1.5rem',
+                    padding: '1.5rem 0',
+                    borderBottom: '1px solid #E5E5E5',
+                  }}
+                >
+                  <img
+                    src={item.productImageUrl || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop'}
+                    alt={item.productName}
+                    style={{ width: '100%', aspectRatio: '2 / 3', objectFit: 'cover' }}
+                  />
+                  <div>
+                    <span className="aura-product-brand">{item.productBrand || 'AURA'}</span>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 500, margin: '2px 0 6px 0' }}>
+                      {item.productName}
+                    </h4>
+                    <div style={{ fontSize: '0.75rem', color: '#707070', display: 'flex', gap: '1rem' }}>
+                      <span>Size: {item.selectedSize || 'M'}</span>
+                      <span>Color: {item.selectedColor || 'Standard'}</span>
+                      <span>Qty: {item.quantity}</span>
                     </div>
                   </div>
-                  <span style={{ fontWeight: 700, color: '#ffffff' }}>
-                    {formatPrice(item.totalPrice)}
-                  </span>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                      {formatPrice(item.totalPrice)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* Actions: Cancel & Return */}
+            <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem' }}>
+              {['ORDER_PLACED', 'CONFIRMED'].includes(order.status) && (
+                <button
+                  onClick={() => setShowCancelPrompt(true)}
+                  className="aura-btn aura-btn-secondary"
+                  style={{ borderColor: '#C62828', color: '#C62828' }}
+                >
+                  CANCEL THIS ORDER
+                </button>
+              )}
+
+              {order.status === 'DELIVERED' && (
+                <button
+                  onClick={() => setShowReturnPrompt(true)}
+                  className="aura-btn aura-btn-secondary"
+                >
+                  REQUEST RETURN / EXCHANGE
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Logistics & Payment Summary */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Delivery Address Snapshot */}
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '20px',
-                padding: '1.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#38bdf8', marginBottom: '0.75rem' }}>
-                <MapPin size={17} />
-                <span>Delivery Address</span>
-              </div>
-              <div style={{ fontWeight: 600, color: '#f8fafc' }}>{order.shippingFullName}</div>
-              <div style={{ color: '#cbd5e1', fontSize: '0.875rem' }}>
-                {order.shippingApartmentSuite ? `${order.shippingApartmentSuite}, ` : ''}{order.shippingStreetAddress}
-              </div>
-              <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-                {order.shippingCity}, {order.shippingState} - {order.shippingPostalCode}, {order.shippingCountry}
-              </div>
-              {order.shippingMobileNumber && (
-                <div style={{ color: '#94a3b8', fontSize: '0.825rem', marginTop: '0.4rem' }}>
-                  Phone: {order.shippingMobileNumber}
-                </div>
-              )}
-            </div>
+          {/* Right Column: Invoice & Shipping Info */}
+          <div style={{ backgroundColor: '#F7F7F7', border: '1px solid #E5E5E5', padding: '2rem' }}>
+            <h3 style={{ fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 1.5rem 0' }}>
+              INVOICE SUMMARY
+            </h3>
 
-            {/* Price Calculations */}
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '20px',
-                padding: '1.5rem',
-              }}
-            >
-              <h4 style={{ fontWeight: 700, fontSize: '1rem', margin: '0 0 1rem' }}>Payment Breakdown</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.875rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
-                  <span>Subtotal</span>
-                  <span>{formatPrice(order.subtotal)}</span>
-                </div>
-                {order.discountAmount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399' }}>
-                    <span>Discount</span>
-                    <span>- {formatPrice(order.discountAmount)}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
-                  <span>Delivery Charges</span>
-                  <span>{order.deliveryCharge === 0 ? 'FREE' : formatPrice(order.deliveryCharge)}</span>
-                </div>
-                <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.08)', margin: '0.4rem 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.05rem', color: '#22d3ee' }}>
-                  <span>Total Paid</span>
-                  <span>{formatPrice(order.totalAmount)}</span>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.82rem', borderBottom: '1px solid #E5E5E5', paddingBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#707070' }}>Subtotal</span>
+                <span>{formatPrice(order.subtotal || order.totalAmount)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#707070' }}>Delivery</span>
+                <span>{order.deliveryCharge === 0 ? 'FREE' : formatPrice(order.deliveryCharge || 0)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#707070' }}>Payment Method</span>
+                <span style={{ textTransform: 'uppercase' }}>{order.paymentMethod || 'SECURE'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#707070' }}>Payment Status</span>
+                <span style={{ color: order.paymentStatus === 'PAID' ? '#287D46' : '#111111', fontWeight: 600 }}>
+                  {order.paymentStatus || 'PENDING'}
+                </span>
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              {isCancellable && (
-                <button
-                  type="button"
-                  onClick={() => setCancelModalOpen(true)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '10px',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
-                    color: '#f87171',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel Order
-                </button>
-              )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '1.5rem 0' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                TOTAL PAID
+              </span>
+              <span style={{ fontSize: '1.4rem', fontWeight: 600 }}>
+                {formatPrice(order.totalAmount)}
+              </span>
+            </div>
 
-              {isReturnable && (
-                <button
-                  type="button"
-                  onClick={() => setReturnModalOpen(true)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    borderRadius: '10px',
-                    background: 'rgba(236, 72, 153, 0.15)',
-                    border: '1px solid rgba(236, 72, 153, 0.35)',
-                    color: '#f472b6',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Request Return
-                </button>
-              )}
+            {/* Delivery Address */}
+            <div style={{ borderTop: '1px solid #E5E5E5', paddingTop: '1.5rem', fontSize: '0.8rem' }}>
+              <span style={{ fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block', marginBottom: '0.5rem' }}>
+                SHIPPING DESTINATION
+              </span>
+              <p style={{ margin: '0 0 0.25rem 0', fontWeight: 600 }}>
+                {order.shippingAddress?.fullName || 'Customer'}
+              </p>
+              <p style={{ margin: 0, color: '#707070', lineHeight: 1.5 }}>
+                {order.shippingAddress?.streetAddress}, {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.postalCode}
+              </p>
+              <p style={{ margin: '0.5rem 0 0 0', color: '#707070' }}>
+                Tel: {order.shippingAddress?.mobileNumber}
+              </p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Cancel Modal */}
-      {cancelModalOpen && (
-        <div style={modalOverlayStyle}>
-          <div style={modalBoxStyle}>
-            <h3 style={{ margin: '0 0 0.5rem', color: '#f87171' }}>Cancel Order #{order.orderNumber}</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
-              Stock will be returned to inventory and order status updated to CANCELLED.
+      {/* Cancel Prompt Modal */}
+      {showCancelPrompt && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#FFFFFF', maxWidth: '450px', width: '100%', padding: '2rem' }}>
+            <h3 style={{ fontSize: '1rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 1rem 0' }}>
+              CANCEL ORDER
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: '#707070', marginBottom: '1.5rem' }}>
+              Are you sure you wish to cancel this order? Any payments made will be reversed to the original payment source.
             </p>
-            <textarea
-              rows={3}
-              placeholder="Why are you cancelling this order?..."
+            <input
+              type="text"
+              placeholder="Reason for cancellation"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              style={textareaStyle}
+              style={{ width: '100%', padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', marginBottom: '1.5rem' }}
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-              <button type="button" onClick={() => setCancelModalOpen(false)} style={btnSecondaryStyle}>
-                Dismiss
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={handleCancelOrder} disabled={actionLoading} className="aura-btn aura-btn-sale aura-btn-full">
+                {actionLoading ? 'CANCELLING...' : 'CONFIRM CANCELLATION'}
               </button>
-              <button type="button" onClick={handleCancel} disabled={actionLoading} style={btnDangerStyle}>
-                {actionLoading ? 'Cancelling...' : 'Confirm Cancellation'}
+              <button onClick={() => setShowCancelPrompt(false)} className="aura-btn aura-btn-secondary aura-btn-full">
+                KEEP ORDER
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Return Modal */}
-      {returnModalOpen && (
-        <div style={modalOverlayStyle}>
-          <div style={modalBoxStyle}>
-            <h3 style={{ margin: '0 0 0.5rem', color: '#f472b6' }}>Request Return for Order #{order.orderNumber}</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
-              Our courier will schedule a doorstep quality check and return pickup.
+      {/* Return Prompt Modal */}
+      {showReturnPrompt && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#FFFFFF', maxWidth: '450px', width: '100%', padding: '2rem' }}>
+            <h3 style={{ fontSize: '1rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 1rem 0' }}>
+              REQUEST RETURN
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: '#707070', marginBottom: '1.5rem' }}>
+              Complimentary pickup will be arranged within 48 hours. Items must be unworn with tags attached.
             </p>
-            <textarea
-              rows={3}
-              placeholder="Reason for returning this item..."
+            <input
+              type="text"
+              placeholder="Reason for return"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              style={textareaStyle}
+              style={{ width: '100%', padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', marginBottom: '1.5rem' }}
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-              <button type="button" onClick={() => setReturnModalOpen(false)} style={btnSecondaryStyle}>
-                Dismiss
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button onClick={handleReturnOrder} disabled={actionLoading} className="aura-btn aura-btn-primary aura-btn-full">
+                {actionLoading ? 'SUBMITTING...' : 'SUBMIT RETURN'}
               </button>
-              <button type="button" onClick={handleReturn} disabled={actionLoading} style={{ ...btnDangerStyle, background: '#ec4899' }}>
-                {actionLoading ? 'Submitting...' : 'Submit Return Request'}
+              <button onClick={() => setShowReturnPrompt(false)} className="aura-btn aura-btn-secondary aura-btn-full">
+                CANCEL
               </button>
             </div>
           </div>
@@ -511,58 +340,3 @@ export default function OrderDetails() {
     </div>
   );
 }
-
-const modalOverlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(7, 11, 20, 0.85)',
-  backdropFilter: 'blur(16px)',
-  zIndex: 1000,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '1.25rem',
-};
-
-const modalBoxStyle = {
-  width: '100%',
-  maxWidth: '480px',
-  background: '#0f172a',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  borderRadius: '20px',
-  padding: '1.75rem',
-  boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)',
-};
-
-const textareaStyle = {
-  width: '100%',
-  padding: '0.65rem 0.85rem',
-  borderRadius: '10px',
-  background: 'rgba(255, 255, 255, 0.08)',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  color: '#ffffff',
-  fontSize: '0.85rem',
-  outline: 'none',
-  resize: 'none',
-};
-
-const btnSecondaryStyle = {
-  padding: '0.5rem 1rem',
-  borderRadius: '8px',
-  background: 'none',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  color: '#cbd5e1',
-  cursor: 'pointer',
-  fontSize: '0.85rem',
-};
-
-const btnDangerStyle = {
-  padding: '0.5rem 1rem',
-  borderRadius: '8px',
-  background: '#ef4444',
-  border: 'none',
-  color: '#ffffff',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '0.85rem',
-};

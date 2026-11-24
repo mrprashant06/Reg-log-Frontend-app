@@ -1,464 +1,340 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import CategoryList from '../components/CategoryList';
+import CustomerHeader from '../components/CustomerHeader';
 import ProductCard from '../components/ProductCard';
-import {
-  getRecommendations,
-  getFeaturedProducts,
-  getTopRatedProducts,
-} from '../services/api';
+import { getFeaturedProducts, getRecommendations, getCategories } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import {
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
-  Headphones,
-  TrendingUp,
-  Award,
-  Zap,
-} from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 
 export default function Dashboard() {
-  const { currentUser, authToken } = useAuth();
+  const { authToken } = useAuth();
   const navigate = useNavigate();
 
-  const [recommended, setRecommended] = useState([]);
-  const [featured, setFeatured] = useState([]);
-  const [topRated, setTopRated] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [emailSubscribed, setEmailSubscribed] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+
   useEffect(() => {
-    async function loadDashboardData() {
+    async function fetchHomeData() {
       try {
         setLoading(true);
-        const [recData, featData, topData] = await Promise.all([
-          getRecommendations(8, authToken),
+        const [feat, rec, cats] = await Promise.all([
           getFeaturedProducts(),
-          getTopRatedProducts(),
+          getRecommendations(8, authToken),
+          getCategories(),
         ]);
-        setRecommended(recData);
-        setFeatured(featData);
-        setTopRated(topData);
+        setFeaturedProducts(feat || []);
+        setRecommendedProducts(rec || []);
+        setCategories(cats || []);
       } catch (err) {
-        console.error('Failed to load dashboard collections:', err);
+        console.error('Failed to load homepage data:', err);
       } finally {
         setLoading(false);
       }
     }
-    loadDashboardData();
+    fetchHomeData();
   }, [authToken]);
 
+  const handleNewsletterSubmit = (e) => {
+    e.preventDefault();
+    if (newsletterEmail) {
+      setEmailSubscribed(true);
+      setNewsletterEmail('');
+      setTimeout(() => setEmailSubscribed(false), 4000);
+    }
+  };
+
   return (
-    <div className="ecommerce-page-root" style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-      {/* Top Navbar */}
-      <Navbar />
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+      {/* Top Editorial Sticky Navigation with MegaMenu */}
+      <CustomerHeader />
 
-      {/* Hero Showcase Banner */}
+      {/* 1. Hero Campaign Section (Zara / Massimo Dutti Editorial) */}
       <section
+        className="aura-hero"
         style={{
-          position: 'relative',
-          padding: '4rem 1.5rem 5rem',
-          overflow: 'hidden',
-          background: 'radial-gradient(ellipse at 50% -20%, rgba(6, 182, 212, 0.25), transparent 70%), linear-gradient(180deg, #0b1120 0%, #070b14 100%)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          backgroundImage: `url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1800&auto=format&fit=crop')`,
         }}
       >
-        <div
-          style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            alignItems: 'center',
-            gap: '3rem',
-          }}
-        >
-          {/* Left Hero Content */}
-          <div>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.4rem 0.9rem',
-                borderRadius: '9999px',
-                background: 'rgba(6, 182, 212, 0.12)',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-                color: '#22d3ee',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                marginBottom: '1.25rem',
-              }}
-            >
-              <Sparkles size={15} />
-              <span>Winter Luxury 2026 Collection</span>
-            </div>
-
-            <h1
-              style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                fontWeight: 800,
-                lineHeight: 1.1,
-                letterSpacing: '-1px',
-                color: '#ffffff',
-                margin: '0 0 1.25rem',
-              }}
-            >
-              Redefining Luxury{' '}
-              <span
-                style={{
-                  background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                E-Commerce
-              </span>
-            </h1>
-
-            <p
-              style={{
-                fontSize: '1.1rem',
-                color: '#94a3b8',
-                lineHeight: 1.6,
-                margin: '0 0 2rem',
-                maxWidth: '540px',
-              }}
-            >
-              Discover curated luxury essentials: Italian tailored suits, designer footwear, precision horology, and next-generation smart electronics with verified delivery.
-            </p>
-
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <Link
-                to="/products"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  padding: '0.9rem 1.8rem',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.95rem',
-                  boxShadow: '0 8px 25px rgba(6, 182, 212, 0.4)',
-                  transition: 'transform 0.2s ease',
-                }}
-              >
-                <span>Explore Products</span>
-                <ArrowRight size={18} />
-              </Link>
-
-              <Link
-                to="/categories"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  padding: '0.9rem 1.8rem',
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#f8fafc',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  backdropFilter: 'blur(10px)',
-                  transition: 'background 0.2s ease',
-                }}
-              >
-                <span>View 10 Categories</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Right Hero Image Card */}
-          <div style={{ position: 'relative' }}>
-            <div
-              style={{
-                position: 'relative',
-                borderRadius: '24px',
-                overflow: 'hidden',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                height: '420px',
-              }}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1000&auto=format&fit=crop"
-                alt="Luxury Lifestyle Experience"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, transparent 60%)',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '1.5rem',
-                  left: '1.5rem',
-                  right: '1.5rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ color: '#06b6d4', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Authentic Guarantee
-                  </div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>
-                    100% Genuine Brands
-                  </div>
-                </div>
-                <span
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '9999px',
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    color: '#34d399',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    border: '1px solid rgba(52, 211, 153, 0.4)',
-                  }}
-                >
-                  Verified Stock
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Badges Strip */}
-      <section
-        style={{
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-          background: 'rgba(15, 23, 42, 0.6)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            padding: '1.5rem 1.25rem',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{ padding: '0.6rem', borderRadius: '10px', background: 'rgba(6, 182, 212, 0.15)', color: '#22d3ee' }}>
-              <Truck size={22} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Free Express Shipping</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>On all orders above ₹999</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{ padding: '0.6rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
-              <ShieldCheck size={22} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Razorpay Secure Checkout</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>UPI, Cards & Cash on Delivery</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{ padding: '0.6rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-              <RotateCcw size={22} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>7-Day Easy Returns</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Hassle-free doorstep pickup</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{ padding: '0.6rem', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}>
-              <Headphones size={22} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Dedicated 24/7 Support</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Live assistance for orders</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Body Container */}
-      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 1.25rem 4rem' }}>
-        {/* Module 1: Dynamic Categories Section */}
-        <CategoryList title="Explore by Category" subtitle="Browse our 10 official product departments" />
-
-        {/* Module 4: Personalized Recommendations */}
-        <section style={{ margin: '4rem 0' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                <Zap size={14} />
-                <span>Tailored Just For You</span>
-              </div>
-              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '2rem', fontWeight: 800, color: '#f8fafc', margin: '0.25rem 0 0' }}>
-                Recommended For You
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0.35rem 0 0' }}>
-                Rule-based picks matching your browsing taste, purchases, and popular trends
-              </p>
-            </div>
-
+        <div className="aura-hero-overlay" />
+        <div className="aura-hero-content">
+          <span className="aura-hero-subtitle">AUTUMN / WINTER 2026</span>
+          <h1 className="aura-hero-title">THE NEW SILHOUETTE</h1>
+          <p style={{ fontSize: '1rem', letterSpacing: '0.04em', margin: '0 0 2rem 0', opacity: 0.9, maxWidth: '500px', lineHeight: 1.5 }}>
+            A study in architectural minimalism, fluid drape, and timeless natural fibers crafted for modern living.
+          </p>
+          <div className="aura-hero-actions">
             <Link
-              to="/products"
-              style={{
-                color: '#06b6d4',
-                textDecoration: 'none',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
+              to="/products?gender=WOMEN"
+              className="aura-btn aura-btn-white"
             >
-              <span>View All Products</span>
-              <ArrowRight size={15} />
+              SHOP WOMAN
+            </Link>
+            <Link
+              to="/products?gender=MEN"
+              className="aura-btn aura-btn-white"
+            >
+              SHOP MAN
             </Link>
           </div>
+        </div>
+      </section>
 
+      {/* 2. Editorial Category Split Grid */}
+      <section className="aura-editorial-grid">
+        <Link to="/products?gender=WOMEN" className="aura-editorial-card">
+          <img
+            src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop"
+            alt="Woman Collection"
+            loading="lazy"
+          />
+          <div className="aura-editorial-content">
+            <span className="aura-title-sub" style={{ color: '#E5E5E5' }}>COLLECTION</span>
+            <h3>WOMAN</h3>
+            <p>Sculpted tailoring, silk slips, and organic cotton essentials.</p>
+            <span className="aura-link-editorial" style={{ color: '#FFFFFF', borderColor: '#FFFFFF' }}>
+              DISCOVER &rarr;
+            </span>
+          </div>
+        </Link>
+
+        <Link to="/products?gender=MEN" className="aura-editorial-card">
+          <img
+            src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1000&auto=format&fit=crop"
+            alt="Man Collection"
+            loading="lazy"
+          />
+          <div className="aura-editorial-content">
+            <span className="aura-title-sub" style={{ color: '#E5E5E5' }}>COLLECTION</span>
+            <h3>MAN</h3>
+            <p>Super 130s Italian wool, crisp poplin shirts, and unstructured outerwear.</p>
+            <span className="aura-link-editorial" style={{ color: '#FFFFFF', borderColor: '#FFFFFF' }}>
+              DISCOVER &rarr;
+            </span>
+          </div>
+        </Link>
+      </section>
+
+      {/* 3. "THE NEW EDIT" — Featured New Collection Grid */}
+      <section style={{ maxWidth: '1600px', margin: '6rem auto', padding: '0 2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
+          <div>
+            <span className="aura-title-sub">JUST ARRIVED</span>
+            <h2 className="aura-title-section" style={{ margin: '0.25rem 0 0 0' }}>THE NEW EDIT</h2>
+          </div>
+          <Link to="/products?sort=newest" className="aura-link-editorial">
+            VIEW ALL ({featuredProducts.length || '12'}) &rarr;
+          </Link>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '4rem 0', color: '#707070', fontSize: '0.85rem' }}>
+            LOADING EDITORIAL PIECES...
+          </div>
+        ) : (
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: '1.5rem',
+              gap: '2rem 1.5rem',
             }}
           >
-            {recommended.map((product) => (
+            {featuredProducts.slice(0, 8).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-        </section>
-
-        {/* Featured Products */}
-        {featured.length > 0 && (
-          <section style={{ margin: '4rem 0' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f59e0b', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  <TrendingUp size={14} />
-                  <span>Editor's Picks</span>
-                </div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '2rem', fontWeight: 800, color: '#f8fafc', margin: '0.25rem 0 0' }}>
-                  Featured Arrivals
-                </h2>
-                <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0.35rem 0 0' }}>
-                  Trending top-tier styles and high-demand tech releases
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: '1.5rem',
-              }}
-            >
-              {featured.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </section>
         )}
+      </section>
 
-        {/* Top Rated Collection */}
-        {topRated.length > 0 && (
-          <section style={{ margin: '4rem 0' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  <Award size={14} />
-                  <span>Customer Favorites</span>
-                </div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '2rem', fontWeight: 800, color: '#f8fafc', margin: '0.25rem 0 0' }}>
-                  Top Rated Collection
-                </h2>
-                <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0.35rem 0 0' }}>
-                  Highest rated products by verified buyers across India
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: '1.5rem',
-              }}
-            >
-              {topRated.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </section>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer
+      {/* 4. Editorial Mid-Campaign Banner (Full Width Atmosphere) */}
+      <section
         style={{
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(11, 17, 33, 0.95)',
-          padding: '3rem 1.5rem',
+          position: 'relative',
+          width: '100%',
+          minHeight: '70vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundImage: `url('https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1800&auto=format&fit=crop')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          textAlign: 'center',
+          color: '#FFFFFF',
+          padding: '4rem 2rem',
         }}
       >
         <div
           style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1.5rem',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.35)',
+          }}
+        />
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: '750px' }}>
+          <span style={{ fontSize: '0.8rem', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '1rem', display: 'block' }}>
+            STUDIO CAMPAIGN
+          </span>
+          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', fontWeight: 300, letterSpacing: '-0.02em', textTransform: 'uppercase', margin: '0 0 1.5rem 0', lineHeight: 1 }}>
+            THE MINIMALIST FORM
+          </h2>
+          <p style={{ fontSize: '1rem', lineHeight: 1.6, opacity: 0.9, marginBottom: '2.5rem' }}>
+            Understated garments designed with purity of line and uncompromising attention to seam, grain, and textile integrity.
+          </p>
+          <Link to="/products" className="aura-btn aura-btn-white">
+            EXPLORE THE EDITORIAL
+          </Link>
+        </div>
+      </section>
+
+      {/* 5. Trending & Recommendations Section */}
+      <section style={{ maxWidth: '1600px', margin: '6rem auto', padding: '0 2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
+          <div>
+            <span className="aura-title-sub">CURATED SELECTION</span>
+            <h2 className="aura-title-section" style={{ margin: '0.25rem 0 0 0' }}>TRENDING THIS SEASON</h2>
+          </div>
+          <Link to="/products?sort=popularity" className="aura-link-editorial">
+            SHOP POPULAR &rarr;
+          </Link>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '2rem 1.5rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Sparkles size={16} color="#ffffff" />
+          {recommendedProducts.slice(0, 4).map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </section>
+
+      {/* 6. Newsletter Subscription (Minimalist Zara Single Line) */}
+      <section
+        style={{
+          borderTop: '1px solid #E5E5E5',
+          borderBottom: '1px solid #E5E5E5',
+          padding: '5rem 2rem',
+          backgroundColor: '#F7F7F7',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <span className="aura-title-sub">STAY CONNECTED</span>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0.5rem 0 1rem 0' }}>
+            JOIN THE AURA COMMUNITY
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: '#707070', lineHeight: 1.6, marginBottom: '2rem' }}>
+            Receive private preview invitations, new collection releases, and editorial lookbooks directly to your inbox.
+          </p>
+
+          {emailSubscribed ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#287D46', fontWeight: 600, fontSize: '0.85rem' }}>
+              <Check size={18} /> THANK YOU FOR SUBSCRIBING. WELCOME TO AURA.
             </div>
-            <div>
-              <div style={{ fontWeight: 800, letterSpacing: '1px' }}>AURA LUXE</div>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                Spring Boot & MySQL Powered E-Commerce Platform
-              </div>
+          ) : (
+            <form onSubmit={handleNewsletterSubmit} style={{ display: 'flex', gap: '0', maxWidth: '480px', margin: '0 auto' }}>
+              <input
+                type="email"
+                required
+                placeholder="ENTER YOUR EMAIL ADDRESS"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '0.85rem 1rem',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  border: '1px solid #111111',
+                  borderRight: 'none',
+                  outline: 'none',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 0,
+                }}
+              />
+              <button
+                type="submit"
+                className="aura-btn aura-btn-primary"
+                style={{ padding: '0.85rem 1.75rem', fontSize: '0.75rem' }}
+              >
+                JOIN
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      {/* 7. Minimalist Editorial Footer */}
+      <footer className="aura-footer">
+        <div className="aura-footer-container">
+          <div className="aura-footer-grid">
+            <div className="aura-footer-brand">
+              <h2>AURA</h2>
+              <p>
+                An original fashion collective dedicated to architectural cuts, refined fabrics, and minimalist everyday luxury.
+              </p>
+            </div>
+
+            <div className="aura-footer-col">
+              <h5>SHOPPING</h5>
+              <ul>
+                <li><Link to="/products?gender=WOMEN">Woman</Link></li>
+                <li><Link to="/products?gender=MEN">Man</Link></li>
+                <li><Link to="/products?sort=newest">New Collection</Link></li>
+                <li><Link to="/products?onSale=true">Sale</Link></li>
+                <li><Link to="/categories">All Categories</Link></li>
+              </ul>
+            </div>
+
+            <div className="aura-footer-col">
+              <h5>CUSTOMER CARE</h5>
+              <ul>
+                <li><Link to="/orders">Order Tracking</Link></li>
+                <li><Link to="/cart">Shipping & Delivery</Link></li>
+                <li><Link to="/profile">Returns & Exchanges</Link></li>
+                <li><Link to="/profile">Payment Methods</Link></li>
+                <li><Link to="/profile">Contact Us</Link></li>
+              </ul>
+            </div>
+
+            <div className="aura-footer-col">
+              <h5>SUSTAINABILITY</h5>
+              <ul>
+                <li><a href="#fibers">Organic Cotton</a></li>
+                <li><a href="#wool">Responsible Wool</a></li>
+                <li><a href="#recycling">Circular Fashion</a></li>
+                <li><a href="#packaging">Eco Packaging</a></li>
+              </ul>
+            </div>
+
+            <div className="aura-footer-col">
+              <h5>COMPANY</h5>
+              <ul>
+                <li><a href="#about">About AURA</a></li>
+                <li><a href="#careers">Careers</a></li>
+                <li><a href="#press">Press & Media</a></li>
+                <li><a href="#stores">Store Locator</a></li>
+              </ul>
             </div>
           </div>
 
-          <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
-            © 2026 AURA LUXE Inc. All rights reserved. Razorpay Secured.
+          <div className="aura-footer-bottom">
+            <span>&copy; {new Date().getFullYear()} AURA FASHION GROUP. ALL RIGHTS RESERVED.</span>
+            <div style={{ display: 'flex', gap: '1.5rem' }}>
+              <a href="#privacy" style={{ color: 'inherit', textDecoration: 'none' }}>PRIVACY POLICY</a>
+              <a href="#terms" style={{ color: 'inherit', textDecoration: 'none' }}>PURCHASE CONDITIONS</a>
+              <a href="#cookies" style={{ color: 'inherit', textDecoration: 'none' }}>COOKIES SETTINGS</a>
+            </div>
           </div>
         </div>
       </footer>

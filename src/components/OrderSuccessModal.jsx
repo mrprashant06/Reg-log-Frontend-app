@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Package, ShoppingBag, Clock, Sparkles } from 'lucide-react';
+import { Check, Package, ArrowRight, Clock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function OrderSuccessModal({ order, onClose }) {
@@ -11,16 +11,16 @@ export default function OrderSuccessModal({ order, onClose }) {
     // Fire celebratory confetti on mount
     try {
       confetti({
-        particleCount: 100,
-        spread: 80,
+        particleCount: 80,
+        spread: 70,
         origin: { y: 0.6 },
-        colors: ['#06b6d4', '#10b981', '#3b82f6', '#f59e0b', '#ffffff'],
+        colors: ['#111111', '#287D46', '#707070', '#E5E5E5'],
       });
     } catch {
       // Confetti fallback
     }
 
-    // 5-second countdown timer for auto-redirect
+    // Exact 5-second countdown timer for auto-redirect
     const interval = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -37,16 +37,12 @@ export default function OrderSuccessModal({ order, onClose }) {
 
   const formatPrice = (val) => {
     if (val === undefined || val === null) return '₹0';
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(val);
   };
-
-  const formattedDate = order?.createdAt
-    ? new Date(order.createdAt).toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
-    : new Date().toLocaleDateString('en-IN');
 
   return (
     <div
@@ -54,178 +50,117 @@ export default function OrderSuccessModal({ order, onClose }) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(7, 11, 20, 0.85)',
-        backdropFilter: 'blur(16px)',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1.25rem',
+        padding: '1.5rem',
       }}
     >
       <div
-        className="order-success-card"
         style={{
           width: '100%',
-          maxWidth: '520px',
-          background: 'rgba(15, 23, 42, 0.95)',
-          border: '1px solid rgba(6, 182, 212, 0.35)',
-          borderRadius: '24px',
-          padding: '2.25rem',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(6, 182, 212, 0.25)',
+          maxWidth: '480px',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #111111',
+          padding: '3rem 2.5rem',
           textAlign: 'center',
-          animation: 'scaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.25)',
+          animation: 'auraFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {/* Animated Success Badge */}
+        {/* Success Icon */}
         <div
           style={{
-            width: '80px',
-            height: '80px',
+            width: '64px',
+            height: '64px',
+            backgroundColor: '#111111',
+            color: '#FFFFFF',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.3))',
-            border: '2px solid #10b981',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 1.5rem',
-            boxShadow: '0 0 30px rgba(16, 185, 129, 0.5)',
+            margin: '0 auto 1.5rem auto',
           }}
         >
-          <CheckCircle2 size={44} style={{ color: '#34d399' }} />
+          <Check size={32} strokeWidth={2} />
         </div>
 
         {/* Heading */}
-        <h2
-          style={{
-            fontFamily: "'Outfit', sans-serif",
-            fontSize: '1.75rem',
-            fontWeight: 800,
-            color: '#ffffff',
-            margin: '0 0 0.5rem',
-          }}
-        >
-          Congratulations!
+        <span className="aura-title-sub">PURCHASE CONFIRMED</span>
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 300, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0.35rem 0 0.75rem 0' }}>
+          THANK YOU FOR YOUR ORDER
         </h2>
-        <p style={{ color: '#22d3ee', fontWeight: 600, fontSize: '1rem', margin: '0 0 1.5rem' }}>
-          Your Order Has Been Placed Successfully!
+        <p style={{ fontSize: '0.82rem', color: '#707070', lineHeight: 1.6, margin: '0 0 2rem 0' }}>
+          Your order has been recorded and is being prepared for dispatch. We have sent a confirmation with delivery updates to your contact details.
         </p>
 
         {/* Order Details Receipt Box */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '16px',
+            backgroundColor: '#F7F7F7',
+            border: '1px solid #E5E5E5',
             padding: '1.25rem',
             textAlign: 'left',
-            marginBottom: '1.5rem',
+            marginBottom: '2rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.65rem',
+            fontSize: '0.8rem',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#94a3b8' }}>Order ID:</span>
-            <strong style={{ color: '#ffffff', fontFamily: 'monospace' }}>
-              #{order?.orderNumber || order?.id}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#707070' }}>ORDER REFERENCE:</span>
+            <strong style={{ letterSpacing: '0.05em' }}>
+              #{order?.orderNumber || order?.id || 'AURA-ORD-1001'}
             </strong>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#94a3b8' }}>Total Amount:</span>
-            <strong style={{ color: '#22d3ee', fontSize: '1.05rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#707070' }}>TOTAL AMOUNT:</span>
+            <strong style={{ fontSize: '0.95rem' }}>
               {formatPrice(order?.totalAmount)}
             </strong>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#94a3b8' }}>Payment Method:</span>
-            <span style={{ color: '#ffffff', fontWeight: 600 }}>
-              {order?.paymentMethod || 'Razorpay Online'}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#707070' }}>PAYMENT METHOD:</span>
+            <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {order?.paymentMethod || 'SECURE CHECKOUT'}
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#94a3b8' }}>Order Date:</span>
-            <span style={{ color: '#cbd5e1' }}>{formattedDate}</span>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-            <span style={{ color: '#94a3b8' }}>Estimated Delivery:</span>
-            <span style={{ color: '#34d399', fontWeight: 600 }}>
-              {order?.estimatedDeliveryInfo || '3-5 Business Days'}
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#707070' }}>ESTIMATED DELIVERY:</span>
+            <span style={{ color: '#287D46', fontWeight: 600 }}>2 - 4 BUSINESS DAYS</span>
           </div>
         </div>
 
-        {/* Countdown redirect indicator */}
+        {/* 5-Second Countdown Alert */}
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.45rem',
-            color: '#94a3b8',
-            fontSize: '0.825rem',
+            gap: '8px',
+            fontSize: '0.75rem',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: '#707070',
             marginBottom: '1.5rem',
           }}
         >
-          <Clock size={15} style={{ color: '#06b6d4' }} />
-          <span>
-            Redirecting to <strong>My Orders</strong> in <strong style={{ color: '#22d3ee' }}>{countdown}s</strong>...
-          </span>
+          <Clock size={14} /> REDIRECTING TO ORDER TRACKING IN {countdown}S...
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-          <button
-            type="button"
-            onClick={() => navigate('/orders')}
-            style={{
-              padding: '0.8rem 1rem',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
-              color: '#ffffff',
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(6, 182, 212, 0.4)',
-            }}
-          >
-            <Package size={17} />
-            <span>View My Orders</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (onClose) onClose();
-              navigate('/dashboard');
-            }}
-            style={{
-              padding: '0.8rem 1rem',
-              borderRadius: '12px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#f8fafc',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-            }}
-          >
-            <ShoppingBag size={17} />
-            <span>Continue Shopping</span>
-          </button>
-        </div>
+        {/* Action Button */}
+        <button
+          onClick={() => navigate('/orders')}
+          className="aura-btn aura-btn-primary aura-btn-full"
+          style={{ padding: '0.9rem', fontSize: '0.78rem' }}
+        >
+          VIEW MY ORDERS NOW &rarr;
+        </button>
       </div>
     </div>
   );

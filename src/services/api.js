@@ -548,3 +548,92 @@ export async function returnOrder(orderId, reason, token) {
   }
   return data.data;
 }
+
+// ==========================================
+// 10. WISHLIST APIS
+// ==========================================
+
+export async function getWishlist(token) {
+  const response = await fetch(`${API_BASE}/wishlist`, {
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to fetch wishlist');
+  return data.data;
+}
+
+export async function addToWishlist(productId, token) {
+  const response = await fetch(`${API_BASE}/wishlist/${productId}`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to add to wishlist');
+  return data.data;
+}
+
+export async function removeFromWishlist(productId, token) {
+  const response = await fetch(`${API_BASE}/wishlist/${productId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to remove from wishlist');
+  return data.data;
+}
+
+export async function moveWishlistToCart(productId, size = 'M', color = 'Standard', token) {
+  const response = await fetch(`${API_BASE}/wishlist/${productId}/move-to-cart?size=${encodeURIComponent(size)}&color=${encodeURIComponent(color)}`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to move item to bag');
+  return data.data;
+}
+
+export async function checkWishlist(productId, token) {
+  if (!token) return false;
+  try {
+    const response = await fetch(`${API_BASE}/wishlist/check/${productId}`, {
+      headers: authHeaders(token),
+    });
+    const data = await response.json();
+    return data?.data?.inWishlist || false;
+  } catch {
+    return false;
+  }
+}
+
+// ==========================================
+// 11. ADMIN APIS (PROFIT, REVENUE, INVENTORY)
+// ==========================================
+
+export async function getAdminAnalytics(token) {
+  const response = await fetch(`${API_BASE}/v1/admin/analytics/overview`, {
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to load analytics');
+  return data.data;
+}
+
+export async function getAdminOrders(params = {}, token) {
+  const query = new URLSearchParams(params).toString();
+  const response = await fetch(`${API_BASE}/v1/admin/orders?${query}`, {
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to load admin orders');
+  return data.data;
+}
+
+export async function updateAdminOrderStatus(orderId, status, token) {
+  const response = await fetch(`${API_BASE}/v1/admin/orders/${orderId}/status?status=${status}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to update order status');
+  return data.data;
+}

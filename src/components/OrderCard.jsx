@@ -10,8 +10,6 @@ import {
   RotateCcw,
   AlertCircle,
   Eye,
-  CreditCard,
-  MapPin,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -36,50 +34,34 @@ export default function OrderCard({ order, authToken, onOrderUpdated }) {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       })
     : 'Recent';
 
-  // Status Badge Colors & Icons
   const getStatusBadge = (status) => {
     switch (status) {
       case 'ORDER_PLACED':
-        return { label: 'Order Placed', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', icon: Clock };
+        return { label: 'Order Placed', color: '#111111', bg: '#F7F7F7', icon: Clock };
       case 'CONFIRMED':
-        return { label: 'Confirmed', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)', icon: CheckCircle2 };
-      case 'PROCESSING':
-        return { label: 'Processing', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', icon: Package };
+        return { label: 'Confirmed', color: '#111111', bg: '#F0F0F0', icon: CheckCircle2 };
       case 'SHIPPED':
-        return { label: 'Shipped', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', icon: Truck };
-      case 'OUT_FOR_DELIVERY':
-        return { label: 'Out for Delivery', color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', icon: Truck };
+        return { label: 'Shipped', color: '#B45309', bg: '#FEF3C7', icon: Truck };
       case 'DELIVERED':
-        return { label: 'Delivered', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', icon: CheckCircle2 };
+        return { label: 'Delivered', color: '#287D46', bg: '#DEF7EC', icon: CheckCircle2 };
       case 'CANCELLED':
-        return { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', icon: XCircle };
-      case 'RETURNED':
-        return { label: 'Return Requested', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)', icon: RotateCcw };
+        return { label: 'Cancelled', color: '#C62828', bg: '#FDE8E8', icon: XCircle };
       default:
-        return { label: status, color: '#94a3b8', bg: 'rgba(255, 255, 255, 0.08)', icon: Package };
+        return { label: status, color: '#707070', bg: '#F7F7F7', icon: Clock };
     }
   };
 
-  const statusInfo = getStatusBadge(order.orderStatus);
+  const statusInfo = getStatusBadge(order.status);
   const StatusIcon = statusInfo.icon;
 
-  const isCancellable = order.orderStatus === 'ORDER_PLACED' || order.orderStatus === 'CONFIRMED';
-  const isReturnable = order.orderStatus === 'DELIVERED';
-
   const handleCancel = async () => {
-    if (!reason.trim()) {
-      setActionError('Please provide a reason for cancellation');
-      return;
-    }
     try {
       setActionLoading(true);
       setActionError('');
-      await cancelOrder(order.id, reason.trim(), authToken);
+      await cancelOrder(order.id, reason.trim() || 'Customer requested cancellation', authToken);
       setShowCancelPrompt(false);
       setReason('');
       if (onOrderUpdated) onOrderUpdated();
@@ -91,14 +73,10 @@ export default function OrderCard({ order, authToken, onOrderUpdated }) {
   };
 
   const handleReturn = async () => {
-    if (!reason.trim()) {
-      setActionError('Please provide a reason for return');
-      return;
-    }
     try {
       setActionLoading(true);
       setActionError('');
-      await returnOrder(order.id, reason.trim(), authToken);
+      await returnOrder(order.id, reason.trim() || 'Customer return', authToken);
       setShowReturnPrompt(false);
       setReason('');
       if (onOrderUpdated) onOrderUpdated();
@@ -109,24 +87,28 @@ export default function OrderCard({ order, authToken, onOrderUpdated }) {
     }
   };
 
+  const trackingSteps = [
+    { label: 'Placed', active: true },
+    { label: 'Confirmed', active: ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(order.status) },
+    { label: 'Shipped', active: ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(order.status) },
+    { label: 'Out for Delivery', active: ['OUT_FOR_DELIVERY', 'DELIVERED'].includes(order.status) },
+    { label: 'Delivered', active: order.status === 'DELIVERED' },
+  ];
+
   return (
     <div
-      className="order-card-wrapper"
       style={{
-        borderRadius: '20px',
-        background: 'rgba(255, 255, 255, 0.035)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(16px)',
-        overflow: 'hidden',
-        transition: 'all 0.2s ease',
+        border: '1px solid #E5E5E5',
+        backgroundColor: '#FFFFFF',
+        marginBottom: '1.5rem',
       }}
     >
-      {/* Order Summary Header Bar */}
+      {/* Header */}
       <div
         style={{
           padding: '1.25rem 1.5rem',
-          background: 'rgba(15, 23, 42, 0.7)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          backgroundColor: '#F7F7F7',
+          borderBottom: '1px solid #E5E5E5',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -134,402 +116,250 @@ export default function OrderCard({ order, authToken, onOrderUpdated }) {
           gap: '1rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Order Number
-            </div>
-            <div style={{ fontWeight: 800, color: '#f8fafc', fontFamily: 'monospace', fontSize: '0.95rem' }}>
-              #{order.orderNumber}
-            </div>
+            <span style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block' }}>
+              ORDER REFERENCE
+            </span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+              #{order.orderNumber || order.id}
+            </span>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Order Date</div>
-            <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>{formattedDate}</div>
+            <span style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block' }}>
+              ORDER DATE
+            </span>
+            <span style={{ fontSize: '0.85rem' }}>{formattedDate}</span>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total Amount</div>
-            <div style={{ fontWeight: 800, color: '#22d3ee', fontSize: '1.05rem' }}>
+            <span style={{ fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block' }}>
+              TOTAL
+            </span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
               {formatPrice(order.totalAmount)}
-            </div>
+            </span>
           </div>
         </div>
 
-        {/* Status Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.35rem 0.8rem',
-              borderRadius: '9999px',
-              background: statusInfo.bg,
+              padding: '4px 10px',
+              backgroundColor: statusInfo.bg,
               color: statusInfo.color,
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              border: `1px solid ${statusInfo.color}35`,
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
             }}
           >
-            <StatusIcon size={14} />
-            <span>{statusInfo.label}</span>
-          </div>
+            {statusInfo.label}
+          </span>
 
           <button
-            type="button"
             onClick={() => setExpanded(!expanded)}
             style={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              background: 'none',
               border: 'none',
-              borderRadius: '8px',
-              color: '#cbd5e1',
-              padding: '0.4rem',
               cursor: 'pointer',
+              color: '#111111',
+              padding: '4px',
               display: 'flex',
               alignItems: 'center',
             }}
-            title={expanded ? 'Collapse' : 'Expand order details'}
+            aria-label="Toggle details"
           >
             {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
         </div>
       </div>
 
-      {/* Main Order Content */}
-      <div style={{ padding: '1.5rem' }}>
-        {/* Items List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
-          {(order.items || []).map((item) => (
-            <div
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '1rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <img
-                  src={item.productImageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop'}
-                  alt={item.productName}
+      {/* Stepper Tracking Bar */}
+      {order.status !== 'CANCELLED' && (
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid #E5E5E5', backgroundColor: '#FFFFFF' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
+            {trackingSteps.map((step, idx) => (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', zIndex: 2 }}>
+                <div
                   style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '12px',
-                    objectFit: 'cover',
-                    background: 'rgba(15, 23, 42, 0.5)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    backgroundColor: step.active ? '#111111' : '#E5E5E5',
+                    border: '2px solid #FFFFFF',
+                    marginBottom: '6px',
                   }}
                 />
-                <div>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#06b6d4', fontWeight: 700 }}>
-                    {item.productBrand}
-                  </div>
-                  <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: '0.925rem' }}>
-                    {item.productName}
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', gap: '0.6rem', marginTop: '0.2rem' }}>
-                    <span>Qty: <strong style={{ color: '#e2e8f0' }}>{item.quantity}</strong></span>
-                    {item.selectedSize && <span>Size: <strong style={{ color: '#e2e8f0' }}>{item.selectedSize}</strong></span>}
-                    {item.selectedColor && <span>Color: <strong style={{ color: '#e2e8f0' }}>{item.selectedColor}</strong></span>}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '1rem' }}>
-                  {formatPrice(item.totalPrice)}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                  ({formatPrice(item.unitPrice)} each)
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Collapsible Deep Details */}
-        {expanded && (
-          <div
-            style={{
-              paddingTop: '1.25rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '1.25rem',
-              fontSize: '0.85rem',
-            }}
-          >
-            {/* Delivery Address Snapshot */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1rem', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#38bdf8', marginBottom: '0.4rem' }}>
-                <MapPin size={15} />
-                <span>Shipping Address</span>
-              </div>
-              <div style={{ color: '#ffffff', fontWeight: 600 }}>{order.shippingFullName}</div>
-              <div style={{ color: '#cbd5e1' }}>
-                {order.shippingApartmentSuite ? `${order.shippingApartmentSuite}, ` : ''}{order.shippingStreetAddress}
-              </div>
-              <div style={{ color: '#94a3b8' }}>
-                {order.shippingCity}, {order.shippingState} - {order.shippingPostalCode}
-              </div>
-              {order.shippingMobileNumber && (
-                <div style={{ color: '#94a3b8', marginTop: '0.25rem' }}>Phone: {order.shippingMobileNumber}</div>
-              )}
-            </div>
-
-            {/* Payment & Logistics Info */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1rem', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#34d399', marginBottom: '0.4rem' }}>
-                <CreditCard size={15} />
-                <span>Payment & Logistics</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span style={{ color: '#94a3b8' }}>Payment Method:</span>
-                <span style={{ color: '#ffffff', fontWeight: 600 }}>{order.paymentMethod}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span style={{ color: '#94a3b8' }}>Payment Status:</span>
-                <span style={{ color: order.paymentStatus === 'PAID' ? '#34d399' : '#f59e0b', fontWeight: 700 }}>
-                  {order.paymentStatus}
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    color: step.active ? '#111111' : '#707070',
+                    fontWeight: step.active ? 600 : 400,
+                    textAlign: 'center',
+                  }}
+                >
+                  {step.label}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#94a3b8' }}>Delivery ETA:</span>
-                <span style={{ color: '#cbd5e1' }}>{order.estimatedDeliveryInfo || '3-5 Days'}</span>
-              </div>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Action Controls: Details, Cancel, Return */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '0.75rem',
-            marginTop: '1.25rem',
-            paddingTop: '1rem',
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            flexWrap: 'wrap',
-          }}
-        >
-          {isCancellable && (
-            <button
-              type="button"
-              onClick={() => setShowCancelPrompt(true)}
-              disabled={actionLoading}
-              style={{
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#f87171',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancel Order
-            </button>
-          )}
-
-          {isReturnable && (
-            <button
-              type="button"
-              onClick={() => setShowReturnPrompt(true)}
-              disabled={actionLoading}
-              style={{
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
-                background: 'rgba(236, 72, 153, 0.12)',
-                border: '1px solid rgba(236, 72, 153, 0.3)',
-                color: '#f472b6',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Request Return
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => navigate(`/orders/${order.id}`)}
+      {/* Item Rows Preview */}
+      <div style={{ padding: '1.5rem' }}>
+        {order.items?.map((item) => (
+          <div
+            key={item.id}
             style={{
               display: 'flex',
+              gap: '1.25rem',
               alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.45rem 1rem',
-              borderRadius: '8px',
-              background: 'rgba(6, 182, 212, 0.15)',
-              border: '1px solid rgba(6, 182, 212, 0.35)',
-              color: '#22d3ee',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
+              padding: '0.75rem 0',
+              borderBottom: '1px solid #F7F7F7',
             }}
           >
-            <Eye size={14} />
-            <span>Track Order</span>
+            <img
+              src={item.productImageUrl || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop'}
+              alt={item.productName}
+              style={{ width: '60px', height: '80px', objectFit: 'cover' }}
+            />
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '0.7rem', color: '#707070', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {item.productBrand || 'AURA'}
+              </span>
+              <h4 style={{ fontSize: '0.85rem', fontWeight: 500, margin: '2px 0 4px 0' }}>
+                {item.productName}
+              </h4>
+              <span style={{ fontSize: '0.75rem', color: '#707070' }}>
+                Size: {item.selectedSize || 'M'} | Qty: {item.quantity}
+              </span>
+            </div>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+              {formatPrice(item.totalPrice)}
+            </span>
+          </div>
+        ))}
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => navigate(`/orders/${order.id}`)}
+            className="aura-btn aura-btn-secondary"
+            style={{ padding: '0.5rem 1rem', fontSize: '0.72rem' }}
+          >
+            ORDER DETAILS & INVOICE
           </button>
+
+          {['ORDER_PLACED', 'CONFIRMED'].includes(order.status) && (
+            <button
+              onClick={() => setShowCancelPrompt(true)}
+              className="aura-btn aura-btn-secondary"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.72rem', borderColor: '#C62828', color: '#C62828' }}
+            >
+              CANCEL ORDER
+            </button>
+          )}
+
+          {order.status === 'DELIVERED' && (
+            <button
+              onClick={() => setShowReturnPrompt(true)}
+              className="aura-btn aura-btn-secondary"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.72rem' }}
+            >
+              REQUEST RETURN / EXCHANGE
+            </button>
+          )}
         </div>
-
-        {/* Action Error */}
-        {actionError && (
-          <div style={{ color: '#f87171', fontSize: '0.8rem', marginTop: '0.5rem', textAlign: 'right' }}>
-            {actionError}
-          </div>
-        )}
-
-        {/* Cancel Prompt Dialog */}
-        {showCancelPrompt && (
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '1rem',
-              borderRadius: '12px',
-              background: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-            }}
-          >
-            <div style={{ fontWeight: 600, color: '#f87171', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
-              Confirm Cancellation for Order #{order.orderNumber}
-            </div>
-            <input
-              type="text"
-              placeholder="Reason for cancellation (e.g. Changed mind, ordered by mistake)..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '8px',
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                fontSize: '0.85rem',
-                outline: 'none',
-                marginBottom: '0.6rem',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCancelPrompt(false);
-                  setReason('');
-                }}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '6px',
-                  background: 'none',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#cbd5e1',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Dismiss
-              </button>
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={actionLoading}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '6px',
-                  background: '#ef4444',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {actionLoading ? 'Cancelling...' : 'Confirm Cancellation'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Return Prompt Dialog */}
-        {showReturnPrompt && (
-          <div
-            style={{
-              marginTop: '1rem',
-              padding: '1rem',
-              borderRadius: '12px',
-              background: 'rgba(236, 72, 153, 0.08)',
-              border: '1px solid rgba(236, 72, 153, 0.25)',
-            }}
-          >
-            <div style={{ fontWeight: 600, color: '#f472b6', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
-              Request Return for Order #{order.orderNumber}
-            </div>
-            <input
-              type="text"
-              placeholder="Reason for return (e.g. Size didn't fit, item defective)..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '8px',
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                fontSize: '0.85rem',
-                outline: 'none',
-                marginBottom: '0.6rem',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowReturnPrompt(false);
-                  setReason('');
-                }}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '6px',
-                  background: 'none',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#cbd5e1',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Dismiss
-              </button>
-              <button
-                type="button"
-                onClick={handleReturn}
-                disabled={actionLoading}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '6px',
-                  background: '#ec4899',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {actionLoading ? 'Submitting...' : 'Submit Return Request'}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Cancel Prompt Modal */}
+      {showCancelPrompt && (
+        <div
+          style={{
+            padding: '1.25rem',
+            backgroundColor: '#FDE8E8',
+            borderTop: '1px solid #C62828',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#C62828' }}>
+            CONFIRM ORDER CANCELLATION
+          </span>
+          <input
+            type="text"
+            placeholder="Reason for cancellation (optional)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            style={{ padding: '0.5rem', fontSize: '0.75rem', border: '1px solid #E5E5E5' }}
+          />
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={handleCancel}
+              disabled={actionLoading}
+              className="aura-btn aura-btn-sale"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.72rem' }}
+            >
+              {actionLoading ? 'CANCELLING...' : 'CONFIRM CANCELLATION'}
+            </button>
+            <button
+              onClick={() => setShowCancelPrompt(false)}
+              className="aura-btn aura-btn-secondary"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.72rem' }}
+            >
+              KEEP ORDER
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Return Prompt Modal */}
+      {showReturnPrompt && (
+        <div
+          style={{
+            padding: '1.25rem',
+            backgroundColor: '#F7F7F7',
+            borderTop: '1px solid #111111',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+            REQUEST RETURN / EXCHANGE
+          </span>
+          <input
+            type="text"
+            placeholder="Reason for return (e.g. Size does not fit)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            style={{ padding: '0.5rem', fontSize: '0.75rem', border: '1px solid #E5E5E5' }}
+          />
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={handleReturn}
+              disabled={actionLoading}
+              className="aura-btn aura-btn-primary"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.72rem' }}
+            >
+              {actionLoading ? 'SUBMITTING...' : 'SUBMIT RETURN REQUEST'}
+            </button>
+            <button
+              onClick={() => setShowReturnPrompt(false)}
+              className="aura-btn aura-btn-secondary"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.72rem' }}
+            >
+              CANCEL
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

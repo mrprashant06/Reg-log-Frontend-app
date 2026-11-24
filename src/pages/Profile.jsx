@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import CustomerHeader from '../components/CustomerHeader';
 import { useAuth } from '../context/AuthContext';
 import {
   getAddresses,
@@ -17,18 +17,14 @@ import {
   Plus,
   Trash2,
   Edit2,
-  CheckCircle2,
-  AlertCircle,
   Key,
-  ShieldCheck,
-  Star,
-  Home,
   LogOut,
-  Loader2,
+  X,
+  Check,
 } from 'lucide-react';
 
 export default function Profile() {
-  const { currentUser, authToken, isAuthenticated, logout } = useAuth();
+  const { user, authToken, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
   const [addresses, setAddresses] = useState([]);
@@ -38,8 +34,8 @@ export default function Profile() {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [addressForm, setAddressForm] = useState({
-    fullName: currentUser?.fullName || '',
-    mobileNumber: currentUser?.phone || '',
+    fullName: user?.fullName || '',
+    mobileNumber: user?.phone || '',
     streetAddress: '',
     apartmentSuite: '',
     city: '',
@@ -64,25 +60,26 @@ export default function Profile() {
       return;
     }
 
-    async function loadUserAddresses() {
+    async function loadProfileData() {
       try {
         setLoading(true);
-        const data = await getAddresses(authToken);
-        setAddresses(data);
+        const addrs = await getAddresses(authToken);
+        setAddresses(addrs || []);
       } catch (err) {
-        console.error('Failed to load addresses:', err);
+        console.error('Failed to load profile addresses:', err);
       } finally {
         setLoading(false);
       }
     }
-    loadUserAddresses();
+
+    loadProfileData();
   }, [isAuthenticated, authToken, navigate]);
 
   const handleOpenNewAddress = () => {
     setEditingAddressId(null);
     setAddressForm({
-      fullName: currentUser?.fullName || '',
-      mobileNumber: currentUser?.phone || '',
+      fullName: user?.fullName || '',
+      mobileNumber: user?.phone || '',
       streetAddress: '',
       apartmentSuite: '',
       city: '',
@@ -154,45 +151,39 @@ export default function Profile() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    setPwError('');
-    setPwSuccess('');
-
     if (newPassword !== confirmPassword) {
-      setPwError('New password and confirmation do not match');
+      setPwError('New passwords do not match');
       return;
     }
-
     try {
       setPwLoading(true);
-      const res = await changePassword(
-        { currentPassword, newPassword, confirmPassword },
-        authToken
-      );
-      setPwSuccess(res.message || 'Password changed successfully!');
+      setPwError('');
+      setPwSuccess('');
+      await changePassword({ currentPassword, newPassword, confirmPassword }, authToken);
+      setPwSuccess('Password successfully updated');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setTimeout(() => setPwSuccess(''), 4000);
     } catch (err) {
-      setPwError(err.message || 'Failed to change password');
+      setPwError(err.message || 'Failed to update password');
     } finally {
       setPwLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#070b14', color: '#ffffff' }}>
-      <Navbar />
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', color: '#111111' }}>
+      <CustomerHeader />
 
-      <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '2.5rem 1.25rem 5rem' }}>
-        {/* Profile Card Header */}
+      <main style={{ maxWidth: '1200px', margin: '3rem auto 6rem auto', padding: '0 2rem' }}>
+        {/* User Card */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '24px',
-            padding: '2rem',
-            backdropFilter: 'blur(20px)',
-            marginBottom: '2.5rem',
+            backgroundColor: '#F7F7F7',
+            border: '1px solid #E5E5E5',
+            padding: '2.5rem',
+            marginBottom: '3rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -200,105 +191,72 @@ export default function Profile() {
             gap: '1.5rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <div
               style={{
-                width: '72px',
-                height: '72px',
+                width: '64px',
+                height: '64px',
+                backgroundColor: '#111111',
+                color: '#FFFFFF',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.85rem',
-                fontWeight: 800,
-                color: '#ffffff',
-                boxShadow: '0 0 30px rgba(6, 182, 212, 0.4)',
+                fontSize: '1.5rem',
+                fontWeight: 300,
               }}
             >
-              {currentUser?.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+              {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
             </div>
             <div>
-              <div style={{ fontSize: '0.8rem', color: '#06b6d4', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '1px' }}>
-                Customer Account #{currentUser?.id}
-              </div>
-              <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.75rem', fontWeight: 800, margin: '0.2rem 0' }}>
-                {currentUser?.fullName}
+              <span className="aura-title-sub">PERSONAL ACCOUNT</span>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 400, margin: '0.2rem 0' }}>
+                {user?.fullName || 'Customer'}
               </h1>
-              <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-                {currentUser?.email || currentUser?.phone}
-              </div>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#707070' }}>
+                {user?.email || user?.phone}
+              </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={logout}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.6rem 1.25rem',
-              borderRadius: '10px',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              color: '#f87171',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-            }}
-          >
-            <LogOut size={16} />
-            <span>Sign Out</span>
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <Link to="/orders" className="aura-btn aura-btn-secondary" style={{ padding: '0.65rem 1.25rem', fontSize: '0.72rem' }}>
+              MY ORDERS
+            </Link>
+            <button
+              onClick={logout}
+              className="aura-btn aura-btn-secondary"
+              style={{ padding: '0.65rem 1.25rem', fontSize: '0.72rem', borderColor: '#C62828', color: '#C62828' }}
+            >
+              <LogOut size={14} /> SIGN OUT
+            </button>
+          </div>
         </div>
 
-        {/* 2-Column Sections: Address Book & Password Update */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2.5rem' }}>
+        {/* 2 Columns: Addresses and Password */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.9fr', gap: '3.5rem', alignItems: 'start' }}>
           {/* Left Column: Address Book */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700 }}>
-                <MapPin size={20} style={{ color: '#06b6d4' }} />
-                <span>Delivery Address Book</span>
-              </div>
-
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #E5E5E5', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: 0 }}>
+                DELIVERY ADDRESS BOOK ({addresses.length})
+              </h3>
               <button
-                type="button"
                 onClick={handleOpenNewAddress}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.45rem 0.85rem',
-                  borderRadius: '8px',
-                  background: 'rgba(6, 182, 212, 0.15)',
-                  border: '1px solid rgba(6, 182, 212, 0.35)',
-                  color: '#22d3ee',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className="aura-btn aura-btn-secondary"
+                style={{ padding: '0.45rem 0.85rem', fontSize: '0.7rem' }}
               >
-                <Plus size={14} />
-                <span>Add Address</span>
+                <Plus size={13} /> ADD ADDRESS
               </button>
             </div>
 
             {loading ? (
-              <div style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>Loading addresses...</div>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#707070', fontSize: '0.82rem' }}>
+                Loading addresses...
+              </div>
             ) : addresses.length === 0 ? (
-              <div
-                style={{
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px dashed rgba(255, 255, 255, 0.1)',
-                  textAlign: 'center',
-                  color: '#94a3b8',
-                }}
-              >
-                No addresses added yet. Add an address for 1-click checkout.
+              <div style={{ padding: '2.5rem', backgroundColor: '#F7F7F7', textAlign: 'center', fontSize: '0.82rem', color: '#707070' }}>
+                No delivery addresses registered.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -307,322 +265,226 @@ export default function Profile() {
                     key={addr.id}
                     style={{
                       padding: '1.25rem',
-                      borderRadius: '16px',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: addr.isDefault ? '2px solid #06b6d4' : '1px solid rgba(255, 255, 255, 0.08)',
-                      backdropFilter: 'blur(10px)',
+                      border: addr.isDefault ? '2px solid #111111' : '1px solid #E5E5E5',
+                      backgroundColor: '#FFFFFF',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.4rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <strong style={{ fontSize: '0.95rem', color: '#ffffff' }}>
-                          {addr.fullName || currentUser?.fullName}
-                        </strong>
-                        <span
-                          style={{
-                            fontSize: '0.7rem',
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '9999px',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            color: '#94a3b8',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {addr.addressType}
-                        </span>
-                        {addr.isDefault && (
-                          <span
-                            style={{
-                              fontSize: '0.7rem',
-                              padding: '0.15rem 0.5rem',
-                              borderRadius: '9999px',
-                              background: 'rgba(6, 182, 212, 0.2)',
-                              color: '#22d3ee',
-                              fontWeight: 700,
-                            }}
-                          >
-                            Default
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                        {addr.fullName}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {addr.isDefault ? (
+                          <span style={{ fontSize: '0.65rem', backgroundColor: '#111111', color: '#FFFFFF', padding: '2px 8px', letterSpacing: '0.05em' }}>
+                            DEFAULT
                           </span>
+                        ) : (
+                          <button
+                            onClick={() => handleSetDefault(addr.id)}
+                            style={{ background: 'none', border: 'none', fontSize: '0.7rem', color: '#707070', textDecoration: 'underline', cursor: 'pointer' }}
+                          >
+                            Set Default
+                          </button>
                         )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button
-                          type="button"
                           onClick={() => handleEditAddress(addr)}
-                          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                          title="Edit"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#111111' }}
                         >
-                          <Edit2 size={15} />
+                          <Edit2 size={14} />
                         </button>
                         <button
-                          type="button"
                           onClick={() => handleDeleteAddress(addr.id)}
-                          style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '4px' }}
-                          title="Delete"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C62828' }}
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
-
-                    <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-                      {addr.apartmentSuite ? `${addr.apartmentSuite}, ` : ''}{addr.streetAddress}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                      {addr.city}, {addr.state} - {addr.postalCode}, {addr.country}
-                    </div>
-
-                    {!addr.isDefault && (
-                      <button
-                        type="button"
-                        onClick={() => handleSetDefault(addr.id)}
-                        style={{
-                          alignSelf: 'flex-start',
-                          background: 'none',
-                          border: 'none',
-                          color: '#06b6d4',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          padding: 0,
-                          marginTop: '0.4rem',
-                        }}
-                      >
-                        Set as Default Address
-                      </button>
-                    )}
+                    <p style={{ fontSize: '0.8rem', color: '#707070', lineHeight: 1.5, margin: 0 }}>
+                      {addr.streetAddress}, {addr.city}, {addr.state} - {addr.postalCode}
+                    </p>
+                    <span style={{ fontSize: '0.75rem', color: '#111111' }}>
+                      Tel: {addr.mobileNumber}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Right Column: Change Account Password */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
-              <Key size={20} style={{ color: '#06b6d4' }} />
-              <span>Security & Password</span>
-            </div>
+          {/* Right Column: Change Password */}
+          <div style={{ backgroundColor: '#F7F7F7', border: '1px solid #E5E5E5', padding: '2rem' }}>
+            <h3 style={{ fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 1.5rem 0' }}>
+              SECURITY & PASSWORD
+            </h3>
 
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '20px',
-                padding: '1.75rem',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              {pwSuccess && (
-                <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                  {pwSuccess}
-                </div>
-              )}
-              {pwError && (
-                <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                  {pwError}
-                </div>
-              )}
+            {pwSuccess && (
+              <div style={{ padding: '0.75rem', backgroundColor: '#DEF7EC', color: '#03543F', fontSize: '0.78rem', marginBottom: '1rem' }}>
+                {pwSuccess}
+              </div>
+            )}
 
-              <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.825rem', color: '#cbd5e1', fontWeight: 600 }}>Current Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    style={profileInputStyle}
-                  />
-                </div>
+            {pwError && (
+              <div style={{ padding: '0.75rem', backgroundColor: '#FDE8E8', color: '#C62828', fontSize: '0.78rem', marginBottom: '1rem' }}>
+                {pwError}
+              </div>
+            )}
 
-                <div>
-                  <label style={{ fontSize: '0.825rem', color: '#cbd5e1', fontWeight: 600 }}>New Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    style={profileInputStyle}
-                  />
-                </div>
+            <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block', marginBottom: '4px' }}>
+                  CURRENT PASSWORD
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  style={{ width: '100%', padding: '0.7rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', backgroundColor: '#FFFFFF', outline: 'none' }}
+                />
+              </div>
 
-                <div>
-                  <label style={{ fontSize: '0.825rem', color: '#cbd5e1', fontWeight: 600 }}>Confirm New Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    style={profileInputStyle}
-                  />
-                </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block', marginBottom: '4px' }}>
+                  NEW PASSWORD
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  style={{ width: '100%', padding: '0.7rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', backgroundColor: '#FFFFFF', outline: 'none' }}
+                />
+              </div>
 
-                <PasswordRequirements password={newPassword} confirmPassword={confirmPassword} />
+              <div>
+                <label style={{ fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#707070', display: 'block', marginBottom: '4px' }}>
+                  CONFIRM NEW PASSWORD
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{ width: '100%', padding: '0.7rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', backgroundColor: '#FFFFFF', outline: 'none' }}
+                />
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={pwLoading}
-                  style={{
-                    height: '44px',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    marginTop: '0.5rem',
-                  }}
-                >
-                  {pwLoading ? 'Updating Password...' : 'Update Password'}
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                disabled={pwLoading}
+                className="aura-btn aura-btn-primary aura-btn-full"
+                style={{ padding: '0.85rem', fontSize: '0.75rem', marginTop: '0.5rem' }}
+              >
+                {pwLoading ? 'UPDATING...' : 'UPDATE PASSWORD'}
+              </button>
+            </form>
           </div>
         </div>
       </main>
 
-      {/* Address Edit/Create Modal */}
+      {/* Address Edit/Add Modal */}
       {showAddressModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalBoxStyle}>
-            <h3 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.35rem', fontWeight: 800, marginBottom: '1.25rem' }}>
-              {editingAddressId ? 'Edit Delivery Address' : 'Add New Address'}
-            </h3>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '1rem',
+          }}
+          onClick={() => setShowAddressModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '2.5rem',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+                {editingAddressId ? 'EDIT ADDRESS' : 'NEW DELIVERY ADDRESS'}
+              </h3>
+              <button onClick={() => setShowAddressModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSaveAddress} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={addressForm.fullName}
-                    onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
-                    style={profileInputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Mobile Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    value={addressForm.mobileNumber}
-                    onChange={(e) => setAddressForm({ ...addressForm, mobileNumber: e.target.value })}
-                    style={profileInputStyle}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>House/Flat/Apartment</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 102 Crystal Heights"
-                  value={addressForm.apartmentSuite}
-                  onChange={(e) => setAddressForm({ ...addressForm, apartmentSuite: e.target.value })}
-                  style={profileInputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Street Address *</label>
+            <form onSubmit={handleSaveAddress} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input
+                type="text"
+                required
+                placeholder="FULL NAME"
+                value={addressForm.fullName}
+                onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
+                style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none' }}
+              />
+              <input
+                type="tel"
+                required
+                placeholder="MOBILE NUMBER"
+                value={addressForm.mobileNumber}
+                onChange={(e) => setAddressForm({ ...addressForm, mobileNumber: e.target.value })}
+                style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none' }}
+              />
+              <input
+                type="text"
+                required
+                placeholder="STREET ADDRESS"
+                value={addressForm.streetAddress}
+                onChange={(e) => setAddressForm({ ...addressForm, streetAddress: e.target.value })}
+                style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none' }}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Park Street"
-                  value={addressForm.streetAddress}
-                  onChange={(e) => setAddressForm({ ...addressForm, streetAddress: e.target.value })}
-                  style={profileInputStyle}
+                  placeholder="CITY"
+                  value={addressForm.city}
+                  onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                  style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none' }}
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="STATE"
+                  value={addressForm.state}
+                  onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                  style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none' }}
                 />
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>City *</label>
-                  <input
-                    type="text"
-                    required
-                    value={addressForm.city}
-                    onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                    style={profileInputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>State *</label>
-                  <input
-                    type="text"
-                    required
-                    value={addressForm.state}
-                    onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-                    style={profileInputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>PIN Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={addressForm.postalCode}
-                    onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
-                    style={profileInputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Address Type</label>
-                  <select
-                    value={addressForm.addressType}
-                    onChange={(e) => setAddressForm({ ...addressForm, addressType: e.target.value })}
-                    style={{ ...profileInputStyle, cursor: 'pointer' }}
-                  >
-                    <option value="HOME" style={{ background: '#0f172a' }}>Home</option>
-                    <option value="OFFICE" style={{ background: '#0f172a' }}>Office / Work</option>
-                    <option value="OTHER" style={{ background: '#0f172a' }}>Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddressModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '0.65rem',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#cbd5e1',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <input
+                  type="text"
+                  required
+                  placeholder="POSTAL CODE"
+                  value={addressForm.postalCode}
+                  onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
+                  style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none' }}
+                />
+                <select
+                  value={addressForm.addressType}
+                  onChange={(e) => setAddressForm({ ...addressForm, addressType: e.target.value })}
+                  style={{ padding: '0.75rem', fontSize: '0.8rem', border: '1px solid #E5E5E5', outline: 'none', backgroundColor: '#FFFFFF' }}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '0.65rem',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Save Address
-                </button>
+                  <option value="HOME">HOME</option>
+                  <option value="WORK">WORK</option>
+                  <option value="OTHER">OTHER</option>
+                </select>
               </div>
+
+              <button type="submit" className="aura-btn aura-btn-primary aura-btn-full" style={{ marginTop: '1rem', padding: '0.85rem' }}>
+                SAVE ADDRESS
+              </button>
             </form>
           </div>
         </div>
@@ -630,37 +492,3 @@ export default function Profile() {
     </div>
   );
 }
-
-const profileInputStyle = {
-  width: '100%',
-  padding: '0.55rem 0.75rem',
-  borderRadius: '8px',
-  background: 'rgba(255, 255, 255, 0.08)',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  color: '#ffffff',
-  fontSize: '0.85rem',
-  outline: 'none',
-  marginTop: '0.25rem',
-};
-
-const modalOverlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(7, 11, 20, 0.85)',
-  backdropFilter: 'blur(16px)',
-  zIndex: 1000,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '1.25rem',
-};
-
-const modalBoxStyle = {
-  width: '100%',
-  maxWidth: '520px',
-  background: '#0f172a',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  borderRadius: '24px',
-  padding: '2rem',
-  boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)',
-};
