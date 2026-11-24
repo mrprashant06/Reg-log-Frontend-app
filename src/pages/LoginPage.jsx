@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Mail,
   Phone,
@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   Database,
   Key,
+  ShoppingBag,
+  ShoppingCart,
+  Package,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import BackgroundOrbs from '../components/BackgroundOrbs';
@@ -24,9 +27,12 @@ import BrandHeader from '../components/BrandHeader';
 import OtpInput from '../components/OtpInput';
 import PasswordRequirements from '../components/PasswordRequirements';
 import { sendOtp, loginUser, logoutUser, changePassword } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { login, logout, currentUser: authContextUser, authToken: authContextToken } = useAuth();
 
   // Identifier state with real-time Email vs Phone auto-detection
   const [identifier, setIdentifier] = useState('');
@@ -42,8 +48,13 @@ export default function LoginPage() {
   const [otpPreview, setOtpPreview] = useState(null);
 
   // User session state
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
+  const [currentUser, setCurrentUser] = useState(authContextUser);
+  const [authToken, setAuthToken] = useState(authContextToken);
+
+  useEffect(() => {
+    if (authContextUser) setCurrentUser(authContextUser);
+    if (authContextToken) setAuthToken(authContextToken);
+  }, [authContextUser, authContextToken]);
 
   // Change Password state (within Dashboard)
   const [showChangePasswordSection, setShowChangePasswordSection] = useState(false);
@@ -177,7 +188,12 @@ export default function LoginPage() {
 
       setCurrentUser(result.user);
       setAuthToken(result.token);
+      login(result.token, result.user);
       setSuccessMsg(`Welcome back, ${result.user?.fullName || 'Valued Member'}!`);
+      const target = location.state?.from || '/dashboard';
+      setTimeout(() => {
+        navigate(target);
+      }, 1000);
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed. Please verify credentials.');
     } finally {
@@ -243,7 +259,7 @@ export default function LoginPage() {
 
   // Handle Sign Out
   const handleSignOut = async () => {
-    await logoutUser(authToken);
+    await logout();
     setCurrentUser(null);
     setAuthToken(null);
     setPassword('');
@@ -296,6 +312,37 @@ export default function LoginPage() {
                       ● {currentUser.status || 'ACTIVE'}
                     </div>
                   </div>
+                </div>
+
+                {/* E-Commerce Navigation Hub */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', margin: '1.25rem 0' }}>
+                  <button
+                    type="button"
+                    className="btn-action-primary"
+                    style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '48px', fontSize: '0.95rem' }}
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    <ShoppingBag size={18} />
+                    <span>Enter E-Commerce Store</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary-trigger"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', height: '42px', margin: 0 }}
+                    onClick={() => navigate('/cart')}
+                  >
+                    <ShoppingCart size={16} />
+                    <span>My Cart</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary-trigger"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', height: '42px', margin: 0 }}
+                    onClick={() => navigate('/orders')}
+                  >
+                    <Package size={16} />
+                    <span>My Orders</span>
+                  </button>
                 </div>
 
                 <div
